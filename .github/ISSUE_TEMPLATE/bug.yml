@@ -1,15 +1,44 @@
-## Bug Title
+name: Bug Report
+description: Report something that isn't working
+title: "[BUG] "
+labels: ["bug"]
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
 
-**To Reproduce**
-Steps to reproduce the behaviour
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: To Reproduce
+      description: Steps to reproduce the behaviour
+      placeholder: |
+        1. Go to...
+        2. Click on...
+        3. See error...
+    validations:
+      required: true
 
-**Expected behaviour**
-A clear and concise description of what you expected to happen.
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
 
-**Priority**
-- [ ] High
-- [ ] Medium
-- [ ] Low
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
