@@ -1,0 +1,44 @@
+name: Feature / Task
+description: New features and tasks
+title: "[FEATURE] "
+labels: ["feature"]
+
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What needs to be done?
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User Story
+      placeholder: |
+        As a __
+        When I __
+        I want to __
+        So that I can __
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical-notes
+    attributes:
+      label: Technical Notes
+      description: AWS services, dependencies, or blockers
+    validations:
+      required: false
+
+  - type: dropdown
+    id: effort
+    attributes:
+      label: Effort
+      options:
+        - Small (< 2hrs)
+        - Medium (2-4hrs)
+        - Large (4-8hrs)
+    validations:
+      required: true
