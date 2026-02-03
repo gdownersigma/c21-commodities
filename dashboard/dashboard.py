@@ -5,6 +5,10 @@ from dotenv import load_dotenv
 import pandas as pd
 import streamlit as st
 
+from helper_functions import (add_commodity,
+                              remove_commodity)
+from dashboard_items import (add_commodity_selector)
+
 st.set_page_config(
     initial_sidebar_state="collapsed",
     layout="wide"
@@ -40,23 +44,8 @@ if "selected_commodities" not in st.session_state:
     st.session_state.selected_commodities = {}  # dict of commodity IDs
 
 
-def add_commodity():
-    """Add a new commodity slot."""
-    st.session_state.num_commodities += 1
-
-
-def remove_commodity():
-    """Remove the last commodity slot."""
-    if st.session_state.num_commodities > 1:
-        st.session_state.num_commodities -= 1
-
-        key = f"commodity_{st.session_state.num_commodities}"
-        if key in st.session_state.selected_commodities:
-            del st.session_state.selected_commodities[key]
-
-
 def build_sidebar(df: pd.DataFrame):
-    """"""
+    """Build the sidebar with filters."""
 
     # Add log out button
 
@@ -77,12 +66,7 @@ def build_sidebar(df: pd.DataFrame):
 
     # Dynamic commodity selectors
     for i in range(st.session_state.num_commodities):
-        st.session_state.selected_commodities[f"commodity_{i}"] = st.sidebar.selectbox(
-            label=f"Select Commodity {i + 1}",
-            options=commodity_options,
-            format_func=lambda x: x[1],
-            key=f"commodity_select_{i}"
-        )
+        add_commodity_selector(commodity_options, i)
 
     st.sidebar.divider()
 
