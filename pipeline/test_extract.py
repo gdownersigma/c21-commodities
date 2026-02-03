@@ -1,8 +1,7 @@
 """Script to test the extract module functions."""
-
+from unittest.mock import patch, MagicMock
 import pytest
 import pandas as pd
-from unittest.mock import patch, MagicMock
 from extract import (
     get_commodity_data,
     fetch_commodity_ids,

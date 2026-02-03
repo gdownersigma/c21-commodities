@@ -2,9 +2,10 @@
 Tests for transform.py functions
 """
 # pylint: disable=too-few-public-methods&&missing-function-docstring
+from unittest.mock import patch, MagicMock
 import pytest
 import pandas as pd
-from unittest.mock import patch, MagicMock
+
 from transform import (
     rename_columns,
     unix_to_datetime,
