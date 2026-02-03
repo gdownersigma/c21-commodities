@@ -3,6 +3,12 @@ variable "aws_region" {
   type        = string
 }
 
+variable "api_key" {
+  description = "API key for Financial Modeling Prep API"
+  type        = string
+  sensitive   = true
+}
+
 variable "vpc_id" {
   description = "VPC ID where RDS will be deployed"
   type        = string
@@ -42,4 +48,9 @@ variable "db_instance_class" {
 variable "db_allocated_storage" {
   description = "Allocated storage in GB"
   type        = number
+}
+
+variable "pipeline_schedule" {
+  description = "Cron expression for pipeline execution schedule"
+  type        = string
 }
