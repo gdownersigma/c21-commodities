@@ -1,3 +1,5 @@
+
+
 # Terraform files
 *.tfstate
 *.tfstate.*
@@ -22,3 +24,9 @@ override.tf.json
 
 # Environment files
 .env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
