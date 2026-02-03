@@ -1,4 +1,4 @@
-""""""
+"""Page for user log in."""
 
 import streamlit as st
 import pandas as pd
@@ -13,7 +13,7 @@ st.title(body="Website Title",
 
 with st.form("log_in_form"):
 
-    st.header(body="Log in!",
+    st.header(body="Log in",
               text_alignment="center")
 
     st.divider()

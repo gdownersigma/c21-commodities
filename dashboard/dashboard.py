@@ -8,7 +8,8 @@ import streamlit as st
 from menu import menu
 from helper_functions import (add_commodity,
                               remove_commodity)
-from dashboard_items import (add_commodity_selector)
+from dashboard_items import (add_commodity_selector,
+                             build_commodity_data)
 
 st.set_page_config(
     layout="wide"
@@ -32,7 +33,6 @@ if "selected_commodities" not in st.session_state:
 def build_sidebar(df: pd.DataFrame):
     """Build the sidebar with filters."""
 
-    # Add log out button
     if st.session_state.current_user:
         if st.sidebar.button("Log out",
                              key="logout_btn"):
@@ -52,6 +52,8 @@ def build_sidebar(df: pd.DataFrame):
                                  key="end_date_input")
 
     st.sidebar.divider()
+
+    st.sidebar.header("Select Commodities")
 
     commodity_options = df[["commodity_id",
                             "commodity_name"]].drop_duplicates().values.tolist()
@@ -78,6 +80,36 @@ def build_sidebar(df: pd.DataFrame):
     return start_date, end_date
 
 
+def display_key_metrics(df: pd.DataFrame):
+    """Display key metrics in the dashboard."""
+    st.header("Key Metrics")
+
+    with st.container(horizontal=True):
+        st.metric(label="Total Commodities Monitored",
+                        value=2)
+        st.metric(label="Average Price Change (%)",
+                        value=1.5)
+
+        st.metric("My metric", 42, 2)
+
+
+def display_combined_graph(df: pd.DataFrame):
+    """Display combined graph of selected commodities."""
+    st.subheader("Price Trends")
+    build_commodity_data(df)
+
+
+def display_individual_graphs(df: pd.DataFrame):
+    """Display individual graphs for each selected commodity."""
+
+    for i in range(st.session_state.num_commodities):
+        comm_id = st.session_state.selected_commodities[f"commodity_{i}"][0]
+        filtered_df = df[df["commodity_id"] == comm_id]
+
+        st.subheader(f"{filtered_df['commodity_name'].iloc[0]}")
+        build_commodity_data(filtered_df)
+
+
 if __name__ == "__main__":
 
     menu()
@@ -94,4 +126,9 @@ if __name__ == "__main__":
 
     start_date, end_date = build_sidebar(df)
 
-    st.session_state.selected_commodities
+    display_key_metrics(df)
+
+    if st.session_state.num_commodities > 1:
+        display_combined_graph(df)
+
+    display_individual_graphs(df)

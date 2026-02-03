@@ -1,4 +1,4 @@
-""""""
+"""Page for user sign up."""
 
 import streamlit as st
 import pandas as pd
@@ -13,7 +13,7 @@ st.title(body="Website Title",
 
 with st.form("sign_up_form"):
 
-    st.header(body="Sign up!",
+    st.header(body="Sign up",
               text_alignment="center")
 
     st.divider()
