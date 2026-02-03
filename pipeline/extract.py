@@ -4,12 +4,63 @@ from os import environ as ENV
 import requests as req
 import pandas as pd
 from dotenv import load_dotenv
+from psycopg2 import connect
 
 DEFAULT_SYMBOLS = symbols = [
     "BZUSD",  # Brent Crude Oil
     "SIUSD",  # Silver
     "GCUSD",  # Gold
 ]
+
+
+def get_conn():
+    """Establishes and returns a connection to the PostgreSQL database."""
+    conn = connect(
+        dbname=ENV.get("DB_NAME"),
+        user=ENV.get("DB_USER"),
+        password=ENV.get("DB_PASSWORD"),
+        host=ENV.get("DB_HOST"),
+        port=ENV.get("DB_PORT"),
+    )
+    return conn
+
+
+def fetch_commodity_ids():
+    """Fetch distinct commodity IDs from user_commodities table."""
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT commodity_id FROM user_commodities;")
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return [row[0] for row in rows]
+
+
+def fetch_symbols_by_ids(ids: list) -> list:
+    """Fetch commodity symbols for given IDs."""
+    symbols = []
+    conn = get_conn()
+    for commodity_id in ids:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT symbol FROM commodities WHERE id = %s;", (commodity_id,))
+        symbol = cursor.fetchone()[0]
+        symbols.append(symbol)
+        cursor.close()
+    conn.close()
+    return symbols
+
+
+def combine_symbols(user_symbols: list) -> set:
+    """Combine user symbols with defaults and return unique set."""
+    return set(user_symbols + DEFAULT_SYMBOLS)
+
+
+def get_tracked_symbols() -> list:
+    """Returns the list of commodity symbols tracked by users."""
+    ids = fetch_commodity_ids()
+    user_symbols = fetch_symbols_by_ids(ids)
+    return combine_symbols(user_symbols)
 
 
 def get_commodity_data(symbol: str) -> pd.DataFrame:
@@ -31,7 +82,7 @@ def get_commodity_data(symbol: str) -> pd.DataFrame:
 def loop_commodities() -> pd.DataFrame:
     """Loops through a list of commodity symbols and fetches their data."""
     all_data = pd.DataFrame()
-    for symbol in DEFAULT_SYMBOLS:
+    for symbol in get_tracked_symbols():
         df = get_commodity_data(symbol)
         all_data = pd.concat([all_data, df], ignore_index=True)
     return all_data
