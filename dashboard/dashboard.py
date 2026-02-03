@@ -5,28 +5,13 @@ from dotenv import load_dotenv
 import pandas as pd
 import streamlit as st
 
+from menu import menu
 from helper_functions import (add_commodity,
                               remove_commodity)
 from dashboard_items import (add_commodity_selector)
 
 st.set_page_config(
-    initial_sidebar_state="collapsed",
     layout="wide"
-)
-
-home = st.Page("dashboard.py", title="Home")
-log_in = st.Page("pages/log_in.py", title="Log in")
-sign_up = st.Page("pages/sign_up.py", title="Sign up")
-# st.Page("pages/account_settings.py", title="Account Settings")
-account_settings = None
-
-guest_pages = [home, log_in]
-user_pages = [home, account_settings]
-hidden_pages = [sign_up]
-
-pg = st.navigation(
-    guest_pages,
-    position="sidebar"
 )
 
 if "current_user" not in st.session_state:
@@ -41,52 +26,73 @@ if "num_commodities" not in st.session_state:
     st.session_state.num_commodities = 1
 
 if "selected_commodities" not in st.session_state:
-    st.session_state.selected_commodities = {}  # dict of commodity IDs
+    st.session_state.selected_commodities = {}
 
 
 def build_sidebar(df: pd.DataFrame):
     """Build the sidebar with filters."""
 
     # Add log out button
+    if st.session_state.current_user:
+        if st.sidebar.button("Log out",
+                             key="logout_btn"):
+            st.session_state.current_user = {}
+            st.rerun()
 
-    # Add Filters
+    st.sidebar.divider()
+
     st.sidebar.header("Filters")
 
-    # Start Date, End Date
     col1, col2 = st.sidebar.columns(2)
     with col1:
-        start_date = st.date_input("Start Date")
+        start_date = st.date_input("Start Date",
+                                   key="start_date_input")
     with col2:
-        end_date = st.date_input("End Date")
+        end_date = st.date_input("End Date",
+                                 key="end_date_input")
 
     st.sidebar.divider()
 
     commodity_options = df[["commodity_id",
                             "commodity_name"]].drop_duplicates().values.tolist()
 
-    # Dynamic commodity selectors
     for i in range(st.session_state.num_commodities):
         add_commodity_selector(commodity_options, i)
 
     st.sidebar.divider()
 
-    # Add/Remove buttons
     col1, col2 = st.sidebar.columns(2)
     with col1:
         st.button("➕ Add",
                   on_click=add_commodity,
                   disabled=(st.session_state.num_commodities >= 5),
-                  use_container_width=True)
+                  use_container_width=True,
+                  key="add_commodity_btn")
     with col2:
         st.button("➖ Remove",
                   on_click=remove_commodity,
                   disabled=(st.session_state.num_commodities <= 1),
-                  use_container_width=True)
+                  use_container_width=True,
+                  key="remove_commodity_btn")
 
     return start_date, end_date
 
 
+def set_current_user():
+    # Callback function to save the role selection to Session State
+    st.session_state.current_user = st.session_state._current_user
+
+
+# Selectbox to choose role
+st.selectbox(
+    "Select your role:",
+    [None, "user"],
+    key="_current_user",
+    on_change=set_current_user,
+)
 if __name__ == "__main__":
+
+    menu()
 
     df = pd.DataFrame({
         "commodity_id": [1, 2, 3, 4, 5],
