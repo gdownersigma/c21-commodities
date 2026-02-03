@@ -4,36 +4,24 @@ import streamlit as st
 import pandas as pd
 
 from menu import menu
-from helper_functions import authenticate_user
+from helper_functions import (authenticate_user)
+from dashboard_items import (build_form,
+                             account_entry_redirect)
 
-menu()
 
-st.title(body="Website Title",
-         text_alignment="center")
+if __name__ == "__main__":
+    menu()
 
-with st.form("log_in_form"):
+    st.title(body="Website Title",
+             text_alignment="center")
 
-    st.header(body="Log in",
-              text_alignment="center")
+    build_form(field_labels={
+        "email": "default",
+        "password": "password",
+    },
+        form_name="Log in",
+        form_key="log_in_form"
+    )
 
-    st.divider()
-
-    field_input = {
-        "email": st.text_input("Email", key="email"),
-        "password": st.text_input("Password", type="password", key="password"),
-    }
-    submitted = st.form_submit_button("Log in")
-
-    if submitted:
-        if authenticate_user(field_input):
-            st.success("Logged in successfully!")
-
-            # Need to use the database details, not field_input
-            st.session_state.current_user = field_input
-            st.switch_page("dashboard.py")
-        else:
-            st.error("Please fill in all fields correctly.")
-
-with st.container(horizontal_alignment="center"):
-    if st.button("Don't have an account? Sign up"):
-        st.switch_page("pages/sign_up.py")
+    account_entry_redirect("Don't have an account? Sign up",
+                           "pages/sign_up.py")
