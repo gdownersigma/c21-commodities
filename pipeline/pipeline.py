@@ -32,6 +32,12 @@ def run_pipeline() -> None:
     print("ETL pipeline complete.")
 
 
+def handler(event, context):
+    """AWS Lambda handler function."""
+    load_dotenv()
+    run_pipeline()
+
+
 if __name__ == "__main__":
     load_dotenv()
     run_pipeline()
