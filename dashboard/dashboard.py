@@ -78,21 +78,12 @@ def build_sidebar(df: pd.DataFrame):
     return start_date, end_date
 
 
-def set_current_user():
-    # Callback function to save the role selection to Session State
-    st.session_state.current_user = st.session_state._current_user
-
-
-# Selectbox to choose role
-st.selectbox(
-    "Select your role:",
-    [None, "user"],
-    key="_current_user",
-    on_change=set_current_user,
-)
 if __name__ == "__main__":
 
     menu()
+
+    st.title(body="Website Title",
+             text_alignment="center")
 
     df = pd.DataFrame({
         "commodity_id": [1, 2, 3, 4, 5],

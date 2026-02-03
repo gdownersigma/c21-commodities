@@ -17,3 +17,18 @@ def remove_commodity():
         key = f"commodity_{st.session_state.num_commodities}"
         if key in st.session_state.selected_commodities:
             del st.session_state.selected_commodities[key]
+
+
+def authenticate_field(field_input: str) -> bool:
+    """Return True if the field is populated."""
+
+    return field_input and field_input.strip() != ""
+
+
+def authenticate_user(user: dict) -> bool:
+    """Return True if all user fields are populated."""
+
+    for value in user.values():
+        if not authenticate_field(value):
+            return False
+    return True
