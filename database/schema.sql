@@ -14,8 +14,7 @@ CREATE TABLE commodities (
     commodity_id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     symbol VARCHAR(10) UNIQUE NOT NULL,
     commodity_name VARCHAR(100) NOT NULL,
-    currency VARCHAR(10) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    currency VARCHAR(10) NOT NULL
 );
 
 CREATE TABLE user_commodities (
