@@ -442,14 +442,3 @@ class TestGetTrackedSymbols:
 
         mock_fetch_symbols.assert_called_once_with([])
         assert result == {"GCUSD"}
-
-
-# Fixture for integration testing (optional - requires real API key)
-@pytest.fixture
-def real_api_key():
-    """Load real API key for integration tests."""
-    import os
-    key = os.environ.get("FMP_API_KEY")
-    if not key:
-        pytest.skip("FMP_API_KEY not set - skipping integration test")
-    return key
