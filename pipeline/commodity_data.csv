@@ -1,4 +1,0 @@
-symbol,name,price,changePercentage,change,volume,dayLow,dayHigh,yearHigh,yearLow,marketCap,priceAvg50,priceAvg200,exchange,open,previousClose,timestamp
-BZUSD,Brent Crude Oil,66.71,0.6184,0.41,18549,65.19,66.77,81.4,58.39,,63.0366,65.6555,COMMODITY,66.3,66.3,1770126299
-SIUSD,Silver Futures,88.68,15.15537,11.671,54066,79.01,88.775,121.3,28.31,,74.25556,48.65024,COMMODITY,79.22,77.009,1770125699
-GCUSD,Gold Futures,4964.5,6.70378,311.9,122198,4690.2,4975.5,5626.8,2844.1,,4567.638,3896.03,COMMODITY,4691.0,4652.6,1770125697
