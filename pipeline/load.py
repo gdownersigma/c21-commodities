@@ -47,5 +47,4 @@ def insert_into_db(df: pd.DataFrame):
 if __name__ == "__main__":
     load_dotenv()
     df = load_data("clean_commodity_data.csv")
-    print(df.head())
-    print(df.columns)
+    insert_into_db(df)
