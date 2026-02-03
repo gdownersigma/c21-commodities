@@ -36,7 +36,7 @@ def rename_columns(df: pd.DataFrame) -> pd.DataFrame:
         "open": "open_price",
         "previousClose": "previous_close",
         "priceAvg50": "price_avg_50",
-        "priceAvg200": "price_avg_200",
+        "priceAvg200": "price_avg_200"
 
     }
     return df.rename(columns=columns_map)
