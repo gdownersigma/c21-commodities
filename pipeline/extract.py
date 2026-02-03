@@ -92,3 +92,4 @@ if __name__ == "__main__":
     load_dotenv()
     df = loop_commodities()
     print(df)
+    # df.to_csv("commodity_data.csv", index=False)
