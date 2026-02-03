@@ -23,4 +23,3 @@ jobs:
       run: pylint . --fail-under 8
     - name: Testing
       run: pytest . --ignore-glob='*' || [ $? -eq 5 ]
-      run: pytest .
