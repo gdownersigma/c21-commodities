@@ -72,12 +72,12 @@ class TestRemoveDeadColumns:
 
         assert "marketCap" not in result.columns
         assert "exchange" not in result.columns
-        assert "symbol" in result.columns
+        assert "name" not in result.columns
 
     def test_handles_missing_columns(self):
-        df = pd.DataFrame([{"symbol": "GCUSD"}])
+        df = pd.DataFrame([{"commodity_id": "10"}])
         result = remove_dead_columns(df)
-        assert "symbol" in result.columns
+        assert "commodity_id" in result.columns
 
 
 class TestCreateIngestedColumn:
@@ -109,6 +109,34 @@ class TestGetSymbolIdMap:
         assert result == {"GCUSD": 1, "CLUSD": 2, "SIUSD": 3}
         mock_cursor.close.assert_called_once()
         mock_conn.close.assert_called_once()
+
+    @patch("transform.get_conn")
+    def test_returns_empty_dict_for_no_commodities(self, mock_get_conn):
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_get_conn.return_value = mock_conn
+
+        result = get_symbol_id_map()
+
+        assert result == {}
+        mock_cursor.close.assert_called_once()
+        mock_conn.close.assert_called_once()
+
+    @patch("transform.get_conn")
+    def test_executes_correct_query(self, mock_get_conn):
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [("GCUSD", 1)]
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_get_conn.return_value = mock_conn
+
+        get_symbol_id_map()
+
+        mock_cursor.execute.assert_called_once_with(
+            "SELECT symbol, commodity_id FROM commodities;"
+        )
 
 
 class TestReplaceSymbolWithId:

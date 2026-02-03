@@ -51,7 +51,7 @@ def unix_to_datetime(df: pd.DataFrame, column: str) -> pd.DataFrame:
 
 def remove_dead_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Removes specified dead columns from the DataFrame."""
-    dead_columns = ["marketCap", "exchange"]
+    dead_columns = ["marketCap", "exchange", "name"]
     return df.drop(columns=dead_columns, errors='ignore')
 
 
