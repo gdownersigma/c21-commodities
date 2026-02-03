@@ -10,7 +10,7 @@ def fetch_historical_data(symbol: str) -> pd.DataFrame:
     """Fetches historical financial data for specified symbol from the given API URL from the last 30 days from today."""
     API_KEY = ENV.get("API_KEY")
     API_URL = f"https://financialmodelingprep.com/stable/historical-price-eod/full?symbol={symbol}&apikey={API_KEY}"
-    response = requests.get(API_URL)
+    response = requests.get(API_URL, timeout=5)
     data = response.json()
     df = pd.DataFrame(data)
     df['date'] = pd.to_datetime(df['date'])
