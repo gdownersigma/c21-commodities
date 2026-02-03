@@ -7,15 +7,14 @@ CREATE TABLE users (
     user_id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     user_name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    user_password VARCHAR(100) NOT NULL
+    password VARCHAR(100) NOT NULL
 );
 
 CREATE TABLE commodities (
     commodity_id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     symbol VARCHAR(10) UNIQUE NOT NULL,
     commodity_name VARCHAR(100) NOT NULL,
-    trade_month VARCHAR(10) NOT NULL,
-    currency_code VARCHAR(10) NOT NULL,
+    currency VARCHAR(10) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -30,12 +29,12 @@ CREATE TABLE user_commodities (
 CREATE TABLE market_records (
     market_record_id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     commodity_id BIGINT REFERENCES commodities(commodity_id) ON DELETE CASCADE,
-    current_at TIMESTAMP NOT NULL,
+    recorded_at TIMESTAMP NOT NULL,
     price FLOAT NOT NULL,
     volume BIGINT,
     day_high FLOAT,
     day_low FLOAT,
-    price_change FLOAT,
+    change FLOAT,
     change_percentage FLOAT,
     open_price FLOAT,
     previous_close FLOAT,
