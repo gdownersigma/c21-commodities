@@ -52,3 +52,21 @@ INSERT INTO commodities (symbol, commodity_name, currency) VALUES
 ('KCUSX',  'Coffee', 'USX'),
 ('GFUSX',  'Feeder Cattle Futures', 'USX'),
 ('SIUSD',  'Silver Futures', 'USD');
+
+
+INSERT INTO user_commodities (user_id, commodity_id, buy_price, sell_price) VALUES
+(1, 18, 2050.50, 2100.00),
+(1, 12, 75.30, 80.00),
+(2, 24, 4500.00, 4600.00),
+(2, 10, 85.20, 90.00),
+(3, 17, 3.25, 3.50),
+(3, 40, 24.80, 26.00),
+(4, 18, 2020.00, 2150.00),
+(5, 8, 4.15, 4.30),
+(5, 27, 950.00, 1000.00),
+(6, 22, 15200.00, 15500.00),
+(7, 12, 72.00, 78.00),
+(8, 18, 2075.00, 2125.00),
+(8, 17, 3.10, 3.40),
+(9, 24, 4480.00, 4650.00),
+(10, 40, 23.50, 25.50);
