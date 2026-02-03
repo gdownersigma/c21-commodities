@@ -6,9 +6,6 @@ import pandas as pd
 from dotenv import load_dotenv
 
 
-
-
-
 def fetch_historical_data(symbol: str) -> pd.DataFrame:
     """Fetches historical financial data for specified symbol from the given API URL from the last 30 days from today."""
     API_KEY = ENV.get("API_KEY")
@@ -20,9 +17,3 @@ def fetch_historical_data(symbol: str) -> pd.DataFrame:
     last_30_days = pd.Timestamp.now() - pd.Timedelta(days=30)
     df = df[df['date'] >= last_30_days]
     return df
-
-
-if __name__ == "__main__":
-    load_dotenv()
-    historical_data_df = fetch_historical_data("DCUSD")
-    print(historical_data_df)
