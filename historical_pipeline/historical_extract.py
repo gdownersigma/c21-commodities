@@ -17,3 +17,9 @@ def fetch_historical_data(symbol: str) -> pd.DataFrame:
     data = response.json()
     df = pd.DataFrame(data)
     return df
+
+
+if __name__ == "__main__":
+    load_dotenv()
+    df = fetch_historical_data("DCUSD")
+    print(df)
