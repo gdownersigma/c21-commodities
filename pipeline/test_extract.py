@@ -1,8 +1,7 @@
 """Script to test the extract module functions."""
-
+from unittest.mock import patch, MagicMock
 import pytest
 import pandas as pd
-from unittest.mock import patch, MagicMock
 from extract import (
     get_commodity_data,
     fetch_commodity_ids,
@@ -349,10 +348,10 @@ class TestFetchSymbolsByIds:
 
         assert mock_cursor.execute.call_count == 2
         mock_cursor.execute.assert_any_call(
-            "SELECT symbol FROM commodities WHERE id = %s;", (1,)
+            "SELECT symbol FROM commodities WHERE commodity_id = %s;", (1,)
         )
         mock_cursor.execute.assert_any_call(
-            "SELECT symbol FROM commodities WHERE id = %s;", (2,)
+            "SELECT symbol FROM commodities WHERE commodity_id = %s;", (2,)
         )
 
     @patch("extract.get_conn")

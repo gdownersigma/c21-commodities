@@ -19,6 +19,7 @@ jobs:
     - name: Install requirements
       run: |
         pip install -r requirements.txt
+        pip install -r pipeline/pipeline_requirements.txt
     - name: Linting
       run: pylint . --fail-under 8
     - name: Testing
