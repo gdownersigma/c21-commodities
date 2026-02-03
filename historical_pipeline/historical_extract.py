@@ -1,4 +1,4 @@
-"""This is a script that extract historical financial data from an API."""
+"""This is a script that extracts historical financial data from an API."""
 
 import requests
 from os import environ as ENV
