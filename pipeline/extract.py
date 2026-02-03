@@ -43,7 +43,7 @@ def fetch_symbols_by_ids(ids: list) -> list:
     for commodity_id in ids:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT symbol FROM commodities WHERE id = %s;", (commodity_id,))
+            "SELECT symbol FROM commodities WHERE commodity_id = %s;", (commodity_id,))
         symbol = cursor.fetchone()[0]
         symbols.append(symbol)
         cursor.close()
