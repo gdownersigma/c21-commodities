@@ -10,6 +10,8 @@ from helper_functions import (add_commodity,
                               remove_commodity)
 from dashboard_items import (add_commodity_selector,
                              build_commodity_data)
+from query_data import (get_connection,
+                        get_commodity_data_by_ids)
 
 st.set_page_config(
     layout="wide"
@@ -29,6 +31,9 @@ if "num_commodities" not in st.session_state:
 if "selected_commodities" not in st.session_state:
     st.session_state.selected_commodities = {}
 
+if "subscribed_commodities" not in st.session_state:
+    st.session_state.subscribed_commodities = [12, 17, 18, 27, 31]
+
 
 def build_sidebar(df: pd.DataFrame):
     """Build the sidebar with filters."""
@@ -37,6 +42,7 @@ def build_sidebar(df: pd.DataFrame):
         if st.sidebar.button("Log out",
                              key="logout_btn"):
             st.session_state.current_user = {}
+            st.session_state.subscribed_commodities = [12, 17, 18, 27, 31]
             st.rerun()
 
     st.sidebar.divider()
@@ -112,17 +118,21 @@ def display_individual_graphs(df: pd.DataFrame):
 
 if __name__ == "__main__":
 
+    load_dotenv()
+
+    conn = get_connection(ENV)
+
+    df = get_commodity_data_by_ids(
+        conn,
+        st.session_state.subscribed_commodities
+    )
+
+    conn.close()
+
     menu()
 
     st.title(body="Website Title",
              text_alignment="center")
-
-    df = pd.DataFrame({
-        "commodity_id": [1, 2, 3, 4, 5],
-        "commodity_name": ["Gold", "Silver", "Copper", "Oil", "Natural Gas"],
-        "buy_price": [2050.25, 28.45, 4.12, 85.30, 3.25],
-        "sell_price": [2055.75, 29.10, 4.18, 86.50, 3.35]
-    })
 
     start_date, end_date = build_sidebar(df)
 
