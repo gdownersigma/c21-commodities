@@ -1,7 +1,7 @@
 """
 Tests for transform.py functions
 """
-
+# pylint: disable=too-few-public-methods&&missing-function-docstring
 import pytest
 import pandas as pd
 from unittest.mock import patch, MagicMock
@@ -40,6 +40,8 @@ def sample_raw_df():
 
 
 class TestRenameColumns:
+    """Tests for rename_columns function"""
+
     def test_renames_columns_correctly(self, sample_raw_df):
         result = rename_columns(sample_raw_df)
 
@@ -51,6 +53,8 @@ class TestRenameColumns:
 
 
 class TestUnixToDatetime:
+    """Tests for unix_to_datetime function"""
+
     def test_converts_and_preserves_precision(self):
         df = pd.DataFrame([{"timestamp": 0}])
 
@@ -61,6 +65,8 @@ class TestUnixToDatetime:
 
 
 class TestRemoveDeadColumns:
+    """Tests for remove_dead_columns function"""
+
     def test_removes_dead_columns(self, sample_raw_df):
         result = remove_dead_columns(sample_raw_df)
 
@@ -75,6 +81,8 @@ class TestRemoveDeadColumns:
 
 
 class TestCreateIngestedColumn:
+    """Tests for create_ingested_column function"""
+
     def test_adds_datetime_column(self):
         df = pd.DataFrame([{"symbol": "GCUSD"}, {"symbol": "CLUSD"}])
 
@@ -86,6 +94,7 @@ class TestCreateIngestedColumn:
 
 
 class TestGetSymbolIdMap:
+    """Tests for get_symbol_id_map function"""
     @patch("transform.get_conn")
     def test_returns_symbol_to_id_mapping(self, mock_get_conn):
         mock_cursor = MagicMock()
@@ -103,6 +112,7 @@ class TestGetSymbolIdMap:
 
 
 class TestReplaceSymbolWithId:
+    """Tests for replace_symbol_with_id function"""
     @patch("transform.get_symbol_id_map")
     def test_replaces_symbol_with_id(self, mock_map):
         mock_map.return_value = {"GCUSD": 1, "CLUSD": 2}
@@ -117,6 +127,8 @@ class TestReplaceSymbolWithId:
 
 
 class TestReorderColumns:
+    """Tests for reorder_columns function"""
+
     def test_reorders_to_schema(self):
         df = pd.DataFrame([{
             "price": 100, "commodity_id": 1, "volume": 500,
@@ -134,6 +146,7 @@ class TestReorderColumns:
 
 
 class TestFullTransformation:
+    """Tests for the full transformation pipeline"""
     @patch("transform.get_symbol_id_map")
     def test_transforms_raw_to_final(self, mock_map, sample_raw_df):
         mock_map.return_value = {"GCUSD": 42}
