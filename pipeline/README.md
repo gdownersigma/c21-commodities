@@ -13,7 +13,7 @@ This ETL pipeline extracts, transforms, and loads commodity market data into a P
    - PostgreSQL database
    - Install dependencies:
      ```bash
-     pip install -r requirements.txt
+     pip install -r pipeline_requirements.txt
      ```
 
 2. **Environment Variables**:
@@ -75,12 +75,12 @@ This ETL pipeline extracts, transforms, and loads commodity market data into a P
 
 ```plaintext
 pipeline/
-├── extract.py       # Extracts data from the FMP API
-├── transform.py     # Transforms raw data into the target schema
-├── load.py          # Loads transformed data into the database
-├── pipeline.py      # Orchestrates the ETL process
-├── requirements.txt # Python dependencies
-└── .env             # Environment variables (not committed to version control)
+├── extract.py                  # Extracts data from the FMP API
+├── transform.py                # Transforms raw data into the target schema
+├── load.py                     # Loads transformed data into the database
+├── pipeline.py                 # Orchestrates the ETL process
+├── pipeline_requirements.txt   # Python dependencies
+└── .env                        # Environment variables (not committed to version control)
 ```
 
 ## Extending the Pipeline
