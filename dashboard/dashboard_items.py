@@ -2,8 +2,9 @@
 
 import streamlit as st
 import pandas as pd
+from psycopg2.extensions import connection
 
-from helper_functions import (authenticate_user)
+from helper_functions import (authenticate_user_input)
 
 
 def add_commodity_selector(commodity_options: list, i: int):
@@ -31,8 +32,8 @@ def build_commodity_data(df: pd.DataFrame):
     st.divider()
 
 
-def build_form(field_labels: dict, form_name: str, form_key: str):
-    """"""
+def build_form(conn: connection, field_labels: dict, form_name: str, form_key: str, on_submit=None):
+    """Build a form for log in and sign up pages."""
 
     with st.form(key=form_key):
 
@@ -50,18 +51,14 @@ def build_form(field_labels: dict, form_name: str, form_key: str):
         submitted = st.form_submit_button(form_name)
 
         if submitted:
-            if authenticate_user(field_input):
-                st.success("Success!")
-
-                # Need to use the database details, not field_input
-                st.session_state.current_user = field_input
-                st.switch_page("dashboard.py")
-            else:
+            if not authenticate_user_input(field_input):
                 st.error("Please fill in all fields correctly.")
+            elif on_submit:
+                on_submit(conn, field_input)
 
 
 def account_entry_redirect(msg: str, page: str):
-    """"""
+    """Create a redirect button for account entry pages."""
 
     with st.container(horizontal_alignment="center"):
         if st.button(msg):

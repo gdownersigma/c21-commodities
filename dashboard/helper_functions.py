@@ -2,6 +2,7 @@
 
 import streamlit as st
 import pandas as pd
+from psycopg2.extensions import connection
 
 
 def add_commodity():
@@ -25,10 +26,11 @@ def authenticate_field(field_input: str) -> bool:
     return field_input and field_input.strip() != ""
 
 
-def authenticate_user(user: dict) -> bool:
+def authenticate_user_input(user: dict) -> bool:
     """Return True if all user fields are populated."""
 
     for value in user.values():
         if not authenticate_field(value):
             return False
     return True
+

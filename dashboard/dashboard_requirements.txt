@@ -5,3 +5,4 @@ streamlit
 pandas
 altair
 psycopg2
+bcrypt

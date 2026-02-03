@@ -22,14 +22,20 @@ def get_connection(config: _Environ) -> connection:
     )
 
 
-def query_database(conn: connection, query: str, parameters: tuple = None) -> pd.DataFrame:
-    """Returns a query result."""
+def load_query(filename: str) -> str:
+    """Load a SQL query from a file."""
+    with open(f"queries/{filename}", 'r') as f:
+        return f.read().strip()
 
-    with conn.cursor() as cur:
-        if parameters:
-            cur.execute(query, parameters)
-        else:
-            cur.execute(query)
+
+@st.cache_data(ttl=600)
+def get_commodity_data_by_ids(_conn: connection, ids: list) -> pd.DataFrame:
+    """Return commodity data from the database."""
+
+    query = sql.SQL(load_query("get_commodity_data_by_ids.sql"))
+
+    with _conn.cursor() as cur:
+        cur.execute(query, (tuple(ids),))
 
         rows = cur.fetchall()
         columns = [desc[0] for desc in cur.description]
@@ -38,16 +44,47 @@ def query_database(conn: connection, query: str, parameters: tuple = None) -> pd
 
 
 @st.cache_data(ttl=600)
-def get_commodity_data_by_ids(_conn: connection, ids: list) -> pd.DataFrame:
-    """Return commodity data from the database."""
+def get_user_count_by_email(_conn: connection, email: str) -> dict:
+    """Return count of user with the given email."""
 
-    query = sql.SQL("""
-        SELECT *
-        FROM commodities
-        WHERE commodity_id IN %s;
-    """)
+    query = sql.SQL(load_query("get_user_count_by_email.sql"))
 
-    return query_database(_conn, query, (tuple(ids),))
+    with _conn.cursor() as cur:
+        cur.execute(query, (email,))
+
+        return cur.fetchone()["user_count"]
+
+
+@st.cache_data(ttl=600)
+def get_user_by_email_password(_conn: connection, email: str, hashed_password: bytes) -> dict:
+    """Return user data from the database based on email and hashed password."""
+
+    query = sql.SQL(load_query("get_user_by_email_password.sql"))
+
+    with _conn.cursor() as cur:
+        cur.execute(query, (email, hashed_password))
+
+        data = cur.fetchone()
+
+        if data:
+            return dict(data)
+        else:
+            return {}
+
+
+@st.cache_data(ttl=600)
+def create_user(_conn: connection, field_input: dict):
+    """Insert a new user into the database."""
+
+    query = sql.SQL(load_query("create_user.sql"))
+
+    with _conn.cursor() as cur:
+        cur.execute(
+            query, (field_input["name"],
+                    field_input["email"],
+                    field_input["hashed_password"]))
+
+    _conn.commit()
 
 
 if __name__ == "__main__":
@@ -56,7 +93,9 @@ if __name__ == "__main__":
 
     conn = get_connection(ENV)
 
-    commodity_ids = [1, 2, 3]
+    # commodity_ids = [1, 2, 3]
 
-    df = get_commodity_data_by_ids(conn, commodity_ids)
-    print(df.head())
+    # df = get_commodity_data_by_ids(conn, commodity_ids)
+
+    data = get_user_count_by_email(conn, "charlie.brmple.com")
+    print(data)

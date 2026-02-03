@@ -20,11 +20,6 @@ st.set_page_config(
 if "current_user" not in st.session_state:
     st.session_state.current_user = {}
 
-# current_user["user_id"]
-# current_user["user_name"]
-# current_user["email"]
-# current_user["hashed_password"]
-
 if "num_commodities" not in st.session_state:
     st.session_state.num_commodities = 1
 
@@ -32,7 +27,7 @@ if "selected_commodities" not in st.session_state:
     st.session_state.selected_commodities = {}
 
 if "subscribed_commodities" not in st.session_state:
-    st.session_state.subscribed_commodities = [12, 17, 18, 27, 31]
+    st.session_state.subscribed_commodities = [10, 18, 40]
 
 
 def build_sidebar(df: pd.DataFrame):
@@ -73,7 +68,9 @@ def build_sidebar(df: pd.DataFrame):
     with col1:
         st.button("➕ Add",
                   on_click=add_commodity,
-                  disabled=(st.session_state.num_commodities >= 5),
+                  disabled=(st.session_state.num_commodities >= min(
+                      len(st.session_state.subscribed_commodities), 10)
+                  ),
                   use_container_width=True,
                   key="add_commodity_btn")
     with col2:
