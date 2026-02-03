@@ -42,3 +42,67 @@ resource "aws_db_instance" "postgres" {
   publicly_accessible    = true
   skip_final_snapshot    = true
 }
+
+resource "aws_ecr_repository" "pipeline" {
+  name                 = "c21-commodities-pipeline"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+}
+
+resource "aws_iam_role" "lambda_role" {
+  name = "c21-commodities-lambda-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "lambda.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_basic" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_lambda_function" "pipeline" {
+  function_name = "c21-commodities-pipeline"
+  role          = aws_iam_role.lambda_role.arn
+  package_type  = "Image"
+  image_uri     = "${aws_ecr_repository.pipeline.repository_url}:latest"
+  timeout       = 300
+
+  environment {
+    variables = {
+      DB_HOST     = aws_db_instance.postgres.address
+      DB_PORT     = "5432"
+      DB_NAME     = var.db_name
+      DB_USER     = var.db_username
+      DB_PASSWORD = var.db_password
+      API_KEY     = var.api_key
+    }
+  }
+}
+
+resource "aws_cloudwatch_event_rule" "pipeline_trigger" {
+  name                = "c21-commodities-pipeline-trigger"
+  schedule_expression = var.pipeline_schedule
+}
+
+resource "aws_cloudwatch_event_target" "lambda_target" {
+  rule      = aws_cloudwatch_event_rule.pipeline_trigger.name
+  target_id = "lambda"
+  arn       = aws_lambda_function.pipeline.arn
+}
+
+resource "aws_lambda_permission" "eventbridge" {
+  statement_id  = "AllowEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.pipeline.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.pipeline_trigger.arn
+}
