@@ -4,9 +4,10 @@ from dotenv import load_dotenv
 from extract import loop_commodities
 from transform import apply_transformations
 from load import insert_into_db
+import pandas as pd
 
 
-def run_pipeline() -> None:
+def run_pipeline() -> pd.df:
     """Run the full ETL pipeline: extract → transform → load."""
     print("Starting ETL pipeline...")
 
@@ -30,12 +31,15 @@ def run_pipeline() -> None:
     print(f"  Loaded {len(clean_df)} records")
 
     print("ETL pipeline complete.")
+    return clean_df
 
 
 def handler(event, context):
     """AWS Lambda handler function."""
     load_dotenv()
-    run_pipeline()
+    clean_df = run_pipeline()
+    df_dict = clean_df[["commodity_id", "price"]].to_dict(orient="records")
+    return {"statusCode": 200, "body": df_dict}
 
 
 if __name__ == "__main__":
