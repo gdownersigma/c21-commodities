@@ -3,7 +3,7 @@
 from os import environ as ENV
 from dotenv import load_dotenv
 from psycopg2 import connect
-
+from generate_alert import generate_alert_email, save_test_email
 test_global_event = {
     "statusCode": 200,
     "body": [
@@ -121,10 +121,12 @@ def get_required_customer_info(action: tuple, latest_prices: dict) -> dict:
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("""
-        SELECT u.email, u.user_name
+        SELECT u.email, u.user_name, c.symbol, c.commodity_name
         FROM users u
-        WHERE u.user_id = %s
-    """, (user_commodity['user_id'],))
+        JOIN user_commodities uc ON u.user_id = uc.user_id
+        JOIN commodities c ON uc.commodity_id = c.commodity_id
+        WHERE u.user_id = %s AND c.commodity_id = %s
+    """, (user_commodity['user_id'], user_commodity['commodity_id']))
 
     row = cur.fetchone()
     cur.close()
@@ -136,6 +138,8 @@ def get_required_customer_info(action: tuple, latest_prices: dict) -> dict:
         "alert_type": alert_type,
         "email": row[0],
         "user_name": row[1],
+        "symbol": row[2],
+        "commodity_name": row[3],
         "current_price": latest_prices[commodity_id]['price'],
         "target_price": user_commodity['buy_price'] if alert_type == 'buy' else user_commodity['sell_price']
     }
@@ -144,6 +148,20 @@ def get_required_customer_info(action: tuple, latest_prices: dict) -> dict:
 def get_all_required_customer_info(actions: list[tuple], latest_prices: dict) -> list[dict]:
     """Get required customer info for all alerts"""
     return [get_required_customer_info(action, latest_prices) for action in actions]
+
+
+def update_alerted_at(user_commodity: dict):
+    """Update the alerted_at timestamp for the user commodity"""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE user_commodities
+        SET alerted_at = NOW()
+        WHERE user_id = %s AND commodity_id = %s
+    """, (user_commodity['user_id'], user_commodity['commodity_id']))
+    conn.commit()
+    cur.close()
+    conn.close()
 
 
 if __name__ == "__main__":
@@ -156,3 +174,6 @@ if __name__ == "__main__":
     all_customer_info = get_all_required_customer_info(
         all_actions, latest_prices)
     print(all_customer_info[0])  # Placeholder for actual alert logic
+    for info in all_customer_info:
+        save_test_email(
+            info, filename=f"test_email_{info['user_name']}_{info['alert_type']}.html")
