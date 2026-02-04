@@ -9,7 +9,8 @@ from menu import menu
 from query_data import (get_connection)
 from dashboard_items import (build_form,
                              account_entry_redirect)
-from query_data import (get_user_by_email_password)
+from query_data import (get_user_by_email_password,
+                        get_users_subscribed_commodities)
 
 
 def handle_login(conn, field_input):
@@ -22,8 +23,12 @@ def handle_login(conn, field_input):
         conn, field_input["email"], field_input["password"])
 
     if user:
-        st.session_state.current_user = user
         st.success(f"Welcome back, {user['user_name']}!")
+
+        st.session_state.subscribed_commodities = get_users_subscribed_commodities(
+            conn, user["email"])
+        st.session_state.current_user = user
+
         st.switch_page("dashboard.py")
     else:
         st.error("Invalid email or password. Please try again.")

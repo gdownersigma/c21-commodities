@@ -85,11 +85,12 @@ def build_sidebar(df: pd.DataFrame):
 
 def display_key_metrics(df: pd.DataFrame):
     """Display key metrics in the dashboard."""
+
     st.header("Key Metrics")
 
     with st.container(horizontal=True):
-        st.metric(label="Total Commodities Monitored",
-                        value=2)
+        st.metric(label="No. Subscribed Commodities",
+                        value=len(st.session_state.subscribed_commodities))
         st.metric(label="Average Price Change (%)",
                         value=1.5)
 

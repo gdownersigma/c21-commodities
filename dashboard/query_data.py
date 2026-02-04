@@ -87,6 +87,20 @@ def create_user(_conn: connection, field_input: dict):
     _conn.commit()
 
 
+@st.cache_data(ttl=600)
+def get_users_subscribed_commodities(_conn: connection, email: str) -> list[int]:
+    """Return a user's subscribed commodities from the database."""
+
+    query = sql.SQL(load_query("get_users_subscribed_commodities.sql"))
+
+    with _conn.cursor() as cur:
+        cur.execute(query, (email,))
+
+        data = cur.fetchall()
+
+    return [item["commodity_id"] for item in data]
+
+
 if __name__ == "__main__":
 
     load_dotenv()
@@ -97,5 +111,5 @@ if __name__ == "__main__":
 
     # df = get_commodity_data_by_ids(conn, commodity_ids)
 
-    data = get_user_count_by_email(conn, "charlie.brmple.com")
+    data = get_users_subscribed_commodities(conn, "bob.wilson@example.com")
     print(data)
