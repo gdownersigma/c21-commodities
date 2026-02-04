@@ -1,0 +1,8 @@
+pytest
+pylint
+python-dotenv
+streamlit
+pandas
+altair
+psycopg2
+bcrypt
