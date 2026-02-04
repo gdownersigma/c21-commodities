@@ -22,16 +22,16 @@ def handle_login(conn, field_input):
     user = get_user_by_email_password(
         conn, field_input["email"], field_input["password"])
 
-    if user:
+    if not user:
+        st.error("Invalid email or password. Please try again.")
+    else:
         st.success(f"Welcome back, {user['user_name']}!")
 
         st.session_state.subscribed_commodities = get_users_subscribed_commodities(
-            conn, user["email"])
-        st.session_state.current_user = user
+            conn, user["user_id"])
+        st.session_state.user = user
 
         st.switch_page("dashboard.py")
-    else:
-        st.error("Invalid email or password. Please try again.")
 
 
 if __name__ == "__main__":
