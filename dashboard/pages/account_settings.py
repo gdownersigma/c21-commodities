@@ -1,4 +1,4 @@
-""""""
+"""Page for account settings."""
 
 import streamlit as st
 import pandas as pd
