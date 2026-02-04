@@ -17,8 +17,8 @@ st.set_page_config(
     layout="wide"
 )
 
-if "current_user" not in st.session_state:
-    st.session_state.current_user = {}
+if "user" not in st.session_state:
+    st.session_state.user = {}
 
 if "num_commodities" not in st.session_state:
     st.session_state.num_commodities = 1
@@ -33,11 +33,13 @@ if "subscribed_commodities" not in st.session_state:
 def build_sidebar(df: pd.DataFrame):
     """Build the sidebar with filters."""
 
-    if st.session_state.current_user:
+    if st.session_state.user:
         if st.sidebar.button("Log out",
                              key="logout_btn"):
-            st.session_state.current_user = {}
-            st.session_state.subscribed_commodities = [12, 17, 18, 27, 31]
+            st.session_state.user = {}
+            st.session_state.subscribed_commodities = [10, 18, 40]
+            st.session_state.selected_commodities = {}
+            st.session_state.num_commodities = 1
             st.rerun()
 
     st.sidebar.divider()

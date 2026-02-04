@@ -18,7 +18,7 @@ def unauthenticated_menu():
 def menu():
     """Determine if a user is logged in or not and show the correct navigation menu."""
 
-    if "current_user" not in st.session_state or not st.session_state.current_user:
+    if "user" not in st.session_state or not st.session_state.user:
         unauthenticated_menu()
         return
     authenticated_menu()
@@ -27,6 +27,6 @@ def menu():
 def menu_with_redirect():
     """Redirect users to the main page if not logged in, then show menu."""
 
-    if "current_user" not in st.session_state or not st.session_state.current_user:
+    if "user" not in st.session_state or not st.session_state.user:
         st.switch_page("dashboard.py")
     menu()
