@@ -7,7 +7,7 @@ from load import insert_into_db
 import pandas as pd
 
 
-def run_pipeline() -> pd.df:
+def run_pipeline() -> pd.DataFrame:
     """Run the full ETL pipeline: extract → transform → load."""
     print("Starting ETL pipeline...")
 
