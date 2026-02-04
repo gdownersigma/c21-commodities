@@ -10,7 +10,8 @@ from query_data import (get_connection)
 from dashboard_items import (build_form,
                              account_entry_redirect)
 from query_data import (get_user_count_by_email,
-                        create_user)
+                        create_user,
+                        create_commodity_connections)
 
 
 def handle_signup(conn, field_input):
@@ -21,18 +22,27 @@ def handle_signup(conn, field_input):
     if user_count != 0:
         st.error("An account with this email already exists. Please log in.")
     else:
-        field_input["hashed_password"] = hashpw(
-            field_input["password"].encode('utf-8'), gensalt())
+        # field_input["hashed_password"] = hashpw(
+        #     field_input["password"].encode('utf-8'), gensalt())
+        field_input["hashed_password"] = field_input["password"]
 
-        create_user(conn, field_input)
+        user_id = create_user(conn, field_input)
 
         user = {
+            "user_id": user_id,
             "user_name": field_input["name"],
             "email": field_input["email"]
         }
 
-        st.session_state.current_user = user
         st.success(f"Welcome, {user['user_name']}!")
+
+        create_commodity_connections(
+            conn,
+            user_id,
+            [10, 18, 40]
+        )
+
+        st.session_state.user = user
         st.switch_page("dashboard.py")
 
 

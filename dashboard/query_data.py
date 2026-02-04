@@ -73,7 +73,7 @@ def get_user_by_email_password(_conn: connection, email: str, hashed_password: b
 
 
 @st.cache_data(ttl=600)
-def create_user(_conn: connection, field_input: dict):
+def create_user(_conn: connection, field_input: dict) -> int:
     """Insert a new user into the database."""
 
     query = sql.SQL(load_query("create_user.sql"))
@@ -84,21 +84,37 @@ def create_user(_conn: connection, field_input: dict):
                     field_input["email"],
                     field_input["hashed_password"]))
 
+        user_id = cur.fetchone()["user_id"]
+
     _conn.commit()
+    return user_id
 
 
 @st.cache_data(ttl=600)
-def get_users_subscribed_commodities(_conn: connection, email: str) -> list[int]:
+def get_users_subscribed_commodities(_conn: connection, user_id: str) -> list[int]:
     """Return a user's subscribed commodities from the database."""
 
     query = sql.SQL(load_query("get_users_subscribed_commodities.sql"))
 
     with _conn.cursor() as cur:
-        cur.execute(query, (email,))
+        cur.execute(query, (user_id,))
 
         data = cur.fetchall()
 
     return [item["commodity_id"] for item in data]
+
+
+@st.cache_data(ttl=600)
+def create_commodity_connections(_conn: connection, user_id: str, commodity_ids: list[int]):
+    """Create connections between a user and multiple commodities."""
+
+    query = sql.SQL(load_query("create_commodity_connections.sql"))
+
+    with _conn.cursor() as cur:
+        data = [(user_id, id) for id in commodity_ids]
+        cur.executemany(query, data)
+
+    _conn.commit()
 
 
 if __name__ == "__main__":
@@ -111,5 +127,19 @@ if __name__ == "__main__":
 
     # df = get_commodity_data_by_ids(conn, commodity_ids)
 
-    data = get_users_subscribed_commodities(conn, "bob.wilson@example.com")
-    print(data)
+    # data = get_users_subscribed_commodities(conn, "bob.wilson@example.com")
+    # print(data)
+
+    user_id = create_user(
+        conn,
+        {
+            "name": "Test User",
+            "email": "test.user@example.com",
+            "hashed_password": "password"
+        }
+    )
+
+    print(user_id)
+    print(type(user_id))
+
+    conn.close()
