@@ -3,3 +3,5 @@ pylint
 requests
 pandas
 python-dotenv
+psycopg2
+ipykernel
