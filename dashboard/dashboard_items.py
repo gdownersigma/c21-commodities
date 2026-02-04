@@ -4,7 +4,8 @@ import streamlit as st
 import pandas as pd
 from psycopg2.extensions import connection
 
-from helper_functions import (authenticate_user_input)
+from helper_functions import (clean_input,
+                              authenticate_user_input)
 
 
 def add_commodity_selector(commodity_options: list, i: int):
@@ -51,6 +52,8 @@ def build_form(conn: connection, field_labels: dict, form_name: str, form_key: s
         submitted = st.form_submit_button(form_name)
 
         if submitted:
+            field_input = clean_input(field_input)
+
             if not authenticate_user_input(field_input):
                 st.error("Please fill in all fields correctly.")
             elif on_submit:

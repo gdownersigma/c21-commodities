@@ -2,7 +2,6 @@
 
 import streamlit as st
 import pandas as pd
-from psycopg2.extensions import connection
 
 
 def add_commodity():
@@ -20,10 +19,20 @@ def remove_commodity():
             del st.session_state.selected_commodities[key]
 
 
+def clean_input(field_input: dict) -> dict:
+    """Return clean input without leading or trailing spaces."""
+
+    for key, val in field_input.items():
+        if field_input is not None and field_input != "":
+            field_input[key] = val.strip()
+
+    return field_input
+
+
 def authenticate_field(field_input: str) -> bool:
     """Return True if the field is populated."""
-
-    return field_input and field_input.strip() != ""
+    
+    return not (field_input is None or field_input == "")
 
 
 def authenticate_user_input(user: dict) -> bool:
@@ -33,4 +42,3 @@ def authenticate_user_input(user: dict) -> bool:
         if not authenticate_field(value):
             return False
     return True
-
