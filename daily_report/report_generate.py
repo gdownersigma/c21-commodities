@@ -2,6 +2,7 @@
 import os
 import base64
 from io import BytesIO
+import boto3
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -115,9 +116,8 @@ def calculate_profit_loss(row: pd.Series) -> dict:
     return {"profit_loss": profit_loss, "profit_loss_pct": profit_loss_pct}
 
 
-def generate_user_html_report(user_name: str, email: str,
-                              user_data: pd.DataFrame, report_date,
-                              market_df: pd.DataFrame) -> str:
+def generate_user_html_report(user_name: str, user_data: pd.DataFrame,
+                              report_date, market_df: pd.DataFrame) -> str:
     """Generate HTML report for a single user."""
 
     rows_html = ""
@@ -331,36 +331,61 @@ def generate_all_user_reports() -> dict:
             print(f"No market data for user {user_name}")
             continue
 
-        html_report = generate_user_html_report(
-            user_name, email, user_data, report_date, market_df)
-        reports[email] = {
-            "user_name": user_name,
-            "html": html_report,
-            "commodities_count": len(user_data)
-        }
-        print(
-            f"Generated report for {user_name} ({email}): {len(user_data)} commodities")
+        reports[email] = generate_user_html_report(
+            user_name, user_data, report_date, market_df)
+        print(f"Generated report for {user_name}")
 
     return reports
 
 
-def save_reports_to_files(reports: dict, output_dir: str = "reports") -> None:
-    """Save generated reports to HTML files."""
-    os.makedirs(output_dir, exist_ok=True)
+def send_email(ses_client, sender: str, recipient: str, html: str) -> bool:
+    """Send email via SES."""
+    try:
+        ses_client.send_email(
+            Source=sender,
+            Destination={"ToAddresses": [recipient]},
+            Message={
+                "Subject": {
+                    "Data": "Your Daily Commodity Report - Pivot Point",
+                    "Charset": "UTF-8"
+                },
+                "Body": {
+                    "Html": {
+                        "Data": html,
+                        "Charset": "UTF-8"
+                    }
+                }
+            }
+        )
+        print(f"Email sent to {recipient}")
+        return True
+    except Exception as e:
+        print(f"Failed to send email to {recipient}: {e}")
+        return False
 
-    for email, report_data in reports.items():
-        filename = f"{output_dir}/{email.replace('@', '_at_').replace('.', '_')}.html"
-        with open(filename, "w") as f:
-            f.write(report_data["html"])
-        print(f"Saved: {filename}")
 
-
-if __name__ == "__main__":
+def handler(event, context):
+    """AWS Lambda handler function."""
     print(f"Generating reports for: {get_previous_day_date()}")
     reports = generate_all_user_reports()
 
-    if reports:
-        save_reports_to_files(reports)
-        print(f"\nGenerated {len(reports)} reports.")
-    else:
+    if not reports:
         print("No reports generated.")
+        return {"statusCode": 200, "emailsSent": 0}
+
+    print(f"Generated {len(reports)} reports.")
+
+    sender_email = os.environ.get("SENDER_EMAIL")
+    if not sender_email:
+        print("ERROR: SENDER_EMAIL environment variable not set")
+        return {"statusCode": 500, "error": "SENDER_EMAIL not configured"}
+
+    ses_client = boto3.client("ses", region_name="eu-west-2")
+    emails_sent = 0
+
+    for email, html in reports.items():
+        if send_email(ses_client, sender_email, email, html):
+            emails_sent += 1
+
+    print(f"Sent {emails_sent}/{len(reports)} emails.")
+    return {"statusCode": 200, "emailsSent": emails_sent}

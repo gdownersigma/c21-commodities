@@ -4,3 +4,4 @@ pandas
 psycopg2-binary
 python-dotenv
 matplotlib
+boto3
