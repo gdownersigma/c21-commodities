@@ -1,12 +1,13 @@
 """Page for user log in."""
 
+# pylint: disable=import-error
+
 from os import environ as ENV
 import streamlit as st
-import pandas as pd
 from bcrypt import hashpw, gensalt
 
 from menu import menu
-from query_data import (get_connection)
+from query_data import get_connection
 from dashboard_items import (build_form,
                              account_entry_redirect)
 from query_data import (get_user_by_email_password,
@@ -35,6 +36,7 @@ def handle_login(conn, field_input):
 
 
 if __name__ == "__main__":
+
     menu()
 
     st.title(body="Website Title",

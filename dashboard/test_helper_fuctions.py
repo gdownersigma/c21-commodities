@@ -1,7 +1,6 @@
 """Testing helper functions for the dashboard application."""
 
 import pytest
-import streamlit as st
 
 from helper_functions import (
     clean_input,

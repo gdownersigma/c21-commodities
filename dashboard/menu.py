@@ -1,3 +1,5 @@
+"""Navigation menu for the dashboard."""
+
 import streamlit as st
 
 

@@ -1,7 +1,8 @@
 """File to hold helper functions for the dashboard."""
 
+# pylint: disable=no-member
+
 import streamlit as st
-import pandas as pd
 
 
 def add_commodity():
@@ -23,7 +24,7 @@ def clean_input(field_input: dict) -> dict:
     """Return clean input without leading or trailing spaces."""
 
     for key, val in field_input.items():
-        if field_input is not None and field_input != "":
+        if val is not None and val != "":
             field_input[key] = val.strip()
 
     return field_input
@@ -31,7 +32,7 @@ def clean_input(field_input: dict) -> dict:
 
 def authenticate_field(field_input: str) -> bool:
     """Return True if the field is populated."""
-    
+
     return not (field_input is None or field_input == "")
 
 
