@@ -14,6 +14,10 @@ from query_data import (get_user_count_by_email,
                         create_user,
                         create_commodity_connections)
 
+st.set_page_config(
+    layout="centered"
+)
+
 
 def handle_signup(conn, field_input):
     """Handle signup logic."""
@@ -47,12 +51,22 @@ def handle_signup(conn, field_input):
         st.switch_page("dashboard.py")
 
 
+def handle_cancel():
+    """Handle cancel button logic."""
+
+    st.switch_page("dashboard.py")
+
+
 if __name__ == "__main__":
 
     menu()
 
-    st.title(body="Website Title",
+    st.title(body="Pivot Point",
              text_alignment="center")
+
+    st.divider()
+
+    st.header("Sign Up", text_alignment="center")
 
     conn = get_connection(ENV)
 
@@ -65,7 +79,9 @@ if __name__ == "__main__":
         },
         form_name="Sign up",
         form_key="sign_up_form",
-        on_submit=handle_signup
+        cancel_name="Back to Dashboard",
+        on_submit=handle_signup,
+        on_cancel=handle_cancel
     )
 
     conn.close()

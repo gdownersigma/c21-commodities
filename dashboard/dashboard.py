@@ -131,8 +131,10 @@ if __name__ == "__main__":
 
     menu()
 
-    st.title(body="Website Title",
+    st.title(body="Pivot Point",
              text_alignment="center")
+
+    st.divider()
 
     start_date, end_date = build_sidebar(df)
 
