@@ -3,4 +3,4 @@ pylint
 requests
 pandas
 python-dotenv
-psycopg2
+psycopg2-binary
