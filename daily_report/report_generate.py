@@ -54,7 +54,7 @@ def format_name(name: str) -> str:
 
 
 def generate_price_chart(symbol: str, commodity_name: str,
-                         market_df: pd.DataFrame) -> tuple:
+                         market_df: pd.DataFrame) -> tuple[str, bytes] | None:
     """Generate a price chart for a commodity and return as (cid, bytes)."""
     commodity_data = market_df[market_df["symbol"] == symbol].copy()
     commodity_data = commodity_data.sort_values("recorded_at")
