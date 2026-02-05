@@ -99,8 +99,7 @@ def generate_price_chart(symbol: str, commodity_name: str,
                     fontsize=12, fontweight='bold', color=color)
     else:
         # Show absolute change when percentage can't be calculated
-        change_symbol = "+" if change >= 0 else "-"
-        ax.annotate(f'{change_symbol}${abs(change):.2f}',
+        ax.annotate(f'${change:+.2f}',
                     xy=(times.iloc[-1], end_price),
                     fontsize=12, fontweight='bold', color=color)
 
