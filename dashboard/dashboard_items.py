@@ -65,7 +65,7 @@ def build_form(conn: connection,
 
             if not authenticate_user_input(field_input):
                 st.error("Please fill in all fields correctly.")
-            elif on_submit:
+            else:
                 on_submit(conn, field_input)
 
         if cancelled:
