@@ -3,11 +3,12 @@
 # pylint: disable=import-error
 
 import streamlit as st
-# import pandas as pd
+import pandas as pd
 
 from menu import menu_with_redirect
 from dashboard_items import (display_markdown_title,
-                             build_single_commodity_edit)
+                             build_single_commodity_edit,
+                             page_redirect)
 
 st.set_page_config(
     layout="wide"
@@ -17,14 +18,14 @@ st.set_page_config(
 def build_commodity_titles():
     """Build commodity title row."""
     col1, col2, col3, col4, col5, col6 = st.columns(
-        [2, 2, 2, 2, 3, 3],
+        [3, 2, 2, 2, 3, 3],
         vertical_alignment="center")
 
     with col1:
         display_markdown_title("Commodity", alignment="left")
 
     with col2:
-        display_markdown_title("Tracked")
+        display_markdown_title("Track")
 
     with col3:
         display_markdown_title("Buy Alerts")
@@ -44,18 +45,84 @@ def build_subscription_table():
 
     build_commodity_titles()
 
-    commodities = [
-        {"id": 1, "name": "Gold"},
-        {"id": 2, "name": "Silver"},
-        {"id": 3, "name": "Crude Oil"},
-        {"id": 4, "name": "Natural Gas"},
-        {"id": 5, "name": "Copper"},
-    ]
+    comm_data = {}
 
-    commodity_data = {}
+    for comm_id, orig_data in st.session_state.user_commodities.items():
+        comm_data[comm_id] = build_single_commodity_edit({
+            "id": comm_id,
+            **orig_data
+        })
 
-    for comm in commodities:
-        commodity_data[comm["id"]] = build_single_commodity_edit(comm)
+    st.divider()
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        with st.container(horizontal_alignment="center"):
+            st.button("Submit", on_click=handle_submit,
+                      args=(comm_data,))
+    with col2:
+        page_redirect("Cancel",
+                      "dashboard.py")
+
+
+def handle_submit(new_comm):
+    """Handle form submission."""
+
+    orig_comm = st.session_state.user_commodities
+
+    create_subscriptions = []
+    delete_subscriptions = []
+    update_subscriptions = []
+
+    for comm_id, data in new_comm.items():
+        orig = orig_comm[comm_id]
+
+        if not data["buy"] and data["buy_price"] != 0.0:
+            data["buy_price"] = 0.0
+
+        if not data["sell"] and data["sell_price"] != 0.0:
+            data["sell_price"] = 0.0
+
+        if data["track"] and not orig["track"]:
+            create_subscriptions.append({
+                "user_id": st.session_state.user["user_id"],
+                "commodity_id": comm_id,
+                "buy_price": data["buy_price"],
+                "sell_price": data["sell_price"]
+            })
+
+        elif not data["track"] and orig["track"]:
+            delete_subscriptions.append(comm_id)
+
+        elif data["track"] and orig["track"]:
+            update = {}
+
+            if data["buy_price"] != orig["buy_price"]:
+                update["buy_price"] = data["buy_price"]
+
+            if data["sell_price"] != orig["sell_price"]:
+                update["sell_price"] = data["sell_price"]
+
+            if update:
+                update["user_id"] = st.session_state.user["user_id"]
+                update["commodity_id"] = comm_id
+                update_subscriptions.append(update)
+
+    print(f"Create: {create_subscriptions}")
+    print(f"Delete: {delete_subscriptions}")
+    print(f"Update: {update_subscriptions}")
+
+    if not create_subscriptions and not delete_subscriptions and not update_subscriptions:
+        st.error("No changes made.")
+    else:
+        # call create, delete, update functions with data
+
+        st.success("Subscriptions updated successfully!")
+        st.session_state.user_commodities = new_comm
+
+        st.session_state.subscribed_commodities = [
+            comm_id for comm_id, data in new_comm.items() if data["track"]]
 
 
 if __name__ == "__main__":
@@ -70,6 +137,5 @@ if __name__ == "__main__":
     st.header("Edit Subscriptions", text_alignment="center")
 
     with st.container(border=True,
-                      horizontal_alignment="center",
-                      ):
+                      horizontal_alignment="center"):
         build_subscription_table()
