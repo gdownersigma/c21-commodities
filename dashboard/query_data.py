@@ -43,6 +43,20 @@ def get_commodity_data_by_ids(_conn: connection, ids: list) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=columns)
 
 
+def get_market_data_by_ids(_conn: connection, ids: list) -> pd.DataFrame:
+    """Return market data for given commodity IDs from the database."""
+
+    query = sql.SQL(load_query("get_market_data_by_commodity_ids.sql"))
+
+    with _conn.cursor() as cur:
+        cur.execute(query, (tuple(ids),))
+
+        rows = cur.fetchall()
+        columns = [desc[0] for desc in cur.description]
+
+    return pd.DataFrame(rows, columns=columns)
+
+
 @st.cache_data(ttl=3600)
 def get_user_count_by_email(_conn: connection, email: str) -> dict:
     """Return count of user with the given email."""
@@ -137,7 +151,7 @@ def create_commodity_connections(_conn: connection, comm_data: list[dict]):
         data = [(item["user_id"],
                  item["commodity_id"],
                  item["buy_price"] if item["buy_price"] != 0 else None,
-                 item["sell_price"] if item["sell_price"] != 0 else None) 
+                 item["sell_price"] if item["sell_price"] != 0 else None)
                 for item in comm_data]
         cur.executemany(query, data)
 
