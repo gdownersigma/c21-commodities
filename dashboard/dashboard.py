@@ -81,18 +81,18 @@ def build_sidebar(df: pd.DataFrame):
         col1, col2 = st.sidebar.columns(2)
         with col1:
             st.button("➕ Add",
-                    on_click=add_commodity,
-                    disabled=(st.session_state.num_commodities >= min(
-                        len(st.session_state.subscribed_commodities), 10)
-                    ),
-                    use_container_width=True,
-                    key="add_commodity_btn")
+                      on_click=add_commodity,
+                      disabled=(st.session_state.num_commodities >= min(
+                          len(st.session_state.subscribed_commodities), 10)
+                      ),
+                      use_container_width=True,
+                      key="add_commodity_btn")
         with col2:
             st.button("➖ Remove",
-                    on_click=remove_commodity,
-                    disabled=(st.session_state.num_commodities <= 1),
-                    use_container_width=True,
-                    key="remove_commodity_btn")
+                      on_click=remove_commodity,
+                      disabled=(st.session_state.num_commodities <= 1),
+                      use_container_width=True,
+                      key="remove_commodity_btn")
 
     return start_date, end_date
 

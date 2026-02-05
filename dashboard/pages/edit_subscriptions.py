@@ -2,6 +2,7 @@
 
 # pylint: disable=import-error
 
+from os import environ as ENV
 import streamlit as st
 import pandas as pd
 
@@ -9,6 +10,10 @@ from menu import menu_with_redirect
 from dashboard_items import (display_markdown_title,
                              build_single_commodity_edit,
                              page_redirect)
+from query_data import (get_connection,
+                        create_commodity_connections,
+                        delete_user_commodities,
+                        get_commodities_with_user_subscriptions)
 
 st.set_page_config(
     layout="wide"
@@ -116,7 +121,14 @@ def handle_submit(new_comm):
     if not create_subscriptions and not delete_subscriptions and not update_subscriptions:
         st.error("No changes made.")
     else:
+        conn = get_connection(ENV)
         # call create, delete, update functions with data
+        create_commodity_connections(conn, create_subscriptions)
+        delete_user_commodities(conn, st.session_state.user["user_id"], delete_subscriptions)
+
+        conn.close()
+
+        get_commodities_with_user_subscriptions.clear()
 
         st.success("Subscriptions updated successfully!")
         st.session_state.user_commodities = new_comm
