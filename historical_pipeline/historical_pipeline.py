@@ -1,4 +1,4 @@
-"""This a script that extracts, transform and loads commodity data from the past 30 days."""
+"""This a script that extracts, transforms, and loads commodity data from the past 30 days."""
 
 import logging
 import pandas as pd
