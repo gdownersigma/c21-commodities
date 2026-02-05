@@ -79,7 +79,8 @@ resource "aws_iam_role_policy" "lambda_ses" {
       Effect = "Allow"
       Action = [
         "ses:SendEmail",
-        "ses:SendRawEmail"
+        "ses:SendRawEmail",
+        "ses:ListVerifiedEmailAddresses"
       ]
       Resource = "*"
     }]
@@ -105,23 +106,101 @@ resource "aws_lambda_function" "pipeline" {
   }
 }
 
+resource "aws_iam_role" "sfn_role" {
+  name = "c21-commodities-sfn-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "states.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "sfn_lambda" {
+  name = "c21-commodities-sfn-lambda-policy"
+  role = aws_iam_role.sfn_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "lambda:InvokeFunction"
+      ]
+      Resource = [
+        aws_lambda_function.pipeline.arn,
+        aws_lambda_function.price_alerts.arn
+      ]
+    }]
+  })
+}
+
+resource "aws_sfn_state_machine" "pipeline_alerts" {
+  name     = "c21-commodities-pipeline-alerts"
+  role_arn = aws_iam_role.sfn_role.arn
+
+  definition = jsonencode({
+    Comment = "Pipeline to Price Alerts workflow"
+    StartAt = "RunPipeline"
+    States = {
+      RunPipeline = {
+        Type     = "Task"
+        Resource = aws_lambda_function.pipeline.arn
+        Next     = "RunPriceAlerts"
+      }
+      RunPriceAlerts = {
+        Type     = "Task"
+        Resource = aws_lambda_function.price_alerts.arn
+        End      = true
+      }
+    }
+  })
+}
+
 resource "aws_cloudwatch_event_rule" "pipeline_trigger" {
   name                = "c21-commodities-pipeline-trigger"
   schedule_expression = var.pipeline_schedule
 }
 
-resource "aws_cloudwatch_event_target" "lambda_target" {
+resource "aws_cloudwatch_event_target" "sfn_target" {
   rule      = aws_cloudwatch_event_rule.pipeline_trigger.name
-  target_id = "lambda"
-  arn       = aws_lambda_function.pipeline.arn
+  target_id = "stepfunction"
+  arn       = aws_sfn_state_machine.pipeline_alerts.arn
+  role_arn  = aws_iam_role.eventbridge_sfn_role.arn
 }
 
-resource "aws_lambda_permission" "eventbridge" {
-  statement_id  = "AllowEventBridge"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.pipeline.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.pipeline_trigger.arn
+resource "aws_iam_role" "eventbridge_sfn_role" {
+  name = "c21-commodities-eventbridge-sfn-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "events.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "eventbridge_sfn" {
+  name = "c21-commodities-eventbridge-sfn-policy"
+  role = aws_iam_role.eventbridge_sfn_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "states:StartExecution"
+      Resource = aws_sfn_state_machine.pipeline_alerts.arn
+    }]
+  })
 }
 
 resource "aws_ecr_repository" "report" {
@@ -168,6 +247,32 @@ resource "aws_lambda_permission" "report_eventbridge" {
   function_name = aws_lambda_function.report.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.report_trigger.arn
+}
+
+resource "aws_ecr_repository" "price_alerts" {
+  name                 = "c21-commodities-price-alerts"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+}
+
+resource "aws_lambda_function" "price_alerts" {
+  function_name = "c21-commodities-price-alerts"
+  role          = aws_iam_role.lambda_role.arn
+  package_type  = "Image"
+  image_uri     = "${aws_ecr_repository.price_alerts.repository_url}:latest"
+  timeout       = 600
+  memory_size   = 1024
+
+  environment {
+    variables = {
+      DB_HOST      = aws_db_instance.postgres.address
+      DB_PORT      = "5432"
+      DB_NAME      = var.db_name
+      DB_USER      = var.db_username
+      DB_PASSWORD  = var.db_password
+      SENDER_EMAIL = var.sender_email
+    }
+  }
 }
 
 resource "aws_ses_email_identity" "sender" {
