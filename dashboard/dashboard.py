@@ -9,9 +9,11 @@ from menu import menu
 from helper_functions import (add_commodity,
                               remove_commodity)
 from dashboard_items import (add_commodity_selector,
-                             build_commodity_data)
+                             build_single_commodity_graph,
+                             build_combined_graph)
 from query_data import (get_connection,
-                        get_commodity_data_by_ids)
+                        get_commodity_data_by_ids,
+                        get_market_data_by_ids)
 
 st.set_page_config(
     layout="wide"
@@ -111,21 +113,24 @@ def display_key_metrics(df: pd.DataFrame):
         st.metric("My metric", 42, 2)
 
 
-def display_combined_graph(df: pd.DataFrame):
+def display_combined_graph(df: pd.DataFrame, conn):
     """Display combined graph of selected commodities."""
     st.subheader("Price Trends")
-    build_commodity_data(df)
+    commodity_ids = df["commodity_id"].unique().tolist()
+    market_df = get_market_data_by_ids(conn, commodity_ids)
+    build_combined_graph(df, market_df)
 
 
-def display_individual_graphs(df: pd.DataFrame):
+def display_individual_graphs(df: pd.DataFrame, conn):
     """Display individual graphs for each selected commodity."""
 
     for i in range(st.session_state.num_commodities):
         comm_id = st.session_state.selected_commodities[f"commodity_{i}"][0]
         filtered_df = df[df["commodity_id"] == comm_id]
+        market_df = get_market_data_by_ids(conn, [comm_id])
 
         st.subheader(f"{filtered_df['commodity_name'].iloc[0]}")
-        build_commodity_data(filtered_df)
+        build_single_commodity_graph(filtered_df, market_df, graph_index=i)
 
 
 if __name__ == "__main__":
@@ -138,8 +143,6 @@ if __name__ == "__main__":
         conn,
         st.session_state.subscribed_commodities
     )
-
-    conn.close()
 
     menu()
 
@@ -154,6 +157,8 @@ if __name__ == "__main__":
         display_key_metrics(df)
 
         if st.session_state.num_commodities > 1:
-            display_combined_graph(df)
+            display_combined_graph(df, conn)
 
-    display_individual_graphs(df)
+    display_individual_graphs(df, conn)
+
+    conn.close()
