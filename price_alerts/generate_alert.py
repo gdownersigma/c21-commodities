@@ -102,7 +102,7 @@ def generate_alert_email(alert: dict) -> str:
                     <!-- CTA Button -->
                     <tr>
                         <td style="padding: 0 30px 40px; text-align: center;">
-                            <a href="#" style="display: inline-block; background-color: #03c1ff; color: white; text-decoration: none; padding: 14px 40px; border-radius: 30px; font-weight: bold; font-size: 16px; box-shadow: 0 6px 20px rgba(3, 193, 255, 0.3); transition: all 0.3s;">
+                            <a href="http://c21-commodities-dashboard-alb-1716191353.eu-west-2.elb.amazonaws.com/" style="display: inline-block; background-color: #03c1ff; color: white; text-decoration: none; padding: 14px 40px; border-radius: 30px; font-weight: bold; font-size: 16px; box-shadow: 0 6px 20px rgba(3, 193, 255, 0.3); transition: all 0.3s;">
                                 View Dashboard →
                             </a>
                         </td>
