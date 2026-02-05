@@ -278,3 +278,29 @@ resource "aws_lambda_function" "price_alerts" {
 resource "aws_ses_email_identity" "sender" {
   email = var.sender_email
 }
+
+resource "aws_ecr_repository" "historical_pipeline" {
+  name                 = "c21-commodities-historical-pipeline"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+}
+
+resource "aws_lambda_function" "historical_pipeline" {
+  function_name = "c21-commodities-historical-pipeline"
+  role          = aws_iam_role.lambda_role.arn
+  package_type  = "Image"
+  image_uri     = "${aws_ecr_repository.historical_pipeline.repository_url}:latest"
+  timeout       = 600
+  memory_size   = 1024
+
+  environment {
+    variables = {
+      DB_HOST     = aws_db_instance.postgres.address
+      DB_PORT     = "5432"
+      DB_NAME     = var.db_name
+      DB_USER     = var.db_username
+      DB_PASSWORD = var.db_password
+      API_KEY     = var.api_key
+    }
+  }
+}
