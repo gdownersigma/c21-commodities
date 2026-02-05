@@ -68,9 +68,10 @@ def check_all_alerts(user_commodities: list[dict], latest_prices: dict) -> list[
     for user_commodity in user_commodities:
         action = check_one_alert(user_commodity, latest_prices.get(
             user_commodity['commodity_id']))
-        alerts.append(action)
+        if action is not None:
+            alerts.append(action)
 
-    return [alert for alert in alerts if alert is not None]
+    return alerts
 
 
 def get_required_customer_info(action: tuple, latest_prices: dict) -> dict:
@@ -178,6 +179,10 @@ def handler(event, context):
     generated_reports = get_generated_report_list(all_customer_info)
 
     send_emails(generated_reports, all_customer_info)
+    return {
+        "statusCode": 200,
+        "message": "Alerts processed successfully",
+    }
 
 
 if __name__ == "__main__":
