@@ -179,6 +179,10 @@ def handler(event, context):
     generated_reports = get_generated_report_list(all_customer_info)
 
     send_emails(generated_reports, all_customer_info)
+    return {
+        "statusCode": 200,
+        "message": "Alerts processed successfully",
+    }
 
 
 if __name__ == "__main__":
