@@ -1,5 +1,4 @@
 """Tests for alert.py functions"""
-import pytest
 from alert import check_one_alert, check_all_alerts, get_latest_prices
 
 

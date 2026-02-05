@@ -1,8 +1,5 @@
 """Function to generate price alert html for commodities."""
 import os
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.image import MIMEImage
 
 
 def get_logo_bytes() -> bytes:

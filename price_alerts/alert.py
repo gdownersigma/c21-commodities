@@ -93,9 +93,10 @@ def check_all_alerts(user_commodities: list[dict], latest_prices: dict) -> list[
     for user_commodity in user_commodities:
         action = check_one_alert(user_commodity, latest_prices.get(
             user_commodity['commodity_id']))
-        alerts.append(action)
+        if action is not None:
+            alerts.append(action)
 
-    return [alert for alert in alerts if alert is not None]
+    return alerts
 
 
 def get_required_customer_info(action: tuple, latest_prices: dict) -> dict:
@@ -280,6 +281,11 @@ def send_emails(generated_reports: list[str], all_customer_info: list[dict]):
         except Exception as e:
             logger.error("Failed to send email to %s: %s", info['email'], e)
             # Continue processing other emails even if one fails
+        verified_emails = ses_client.list_verified_email_addresses()[
+            'VerifiedEmailAddresses']
+        if info['email'] not in verified_emails:
+            print(f"Email {info['email']} is not verified in SES. Skipping.")
+            continue
 
 
 def handler(event, context):
@@ -315,6 +321,9 @@ def handler(event, context):
         generated_reports = get_generated_report_list(all_customer_info)
 
         send_emails(generated_reports, all_customer_info)
+def handler(event, context):
+    user_commodities = get_user_commodities()
+    latest_prices = get_latest_prices(event)
 
         logger.info("Successfully processed %d alerts", len(all_customer_info))
         return {"statusCode": 200, "message": f"Processed {len(all_customer_info)} alerts"}
@@ -325,6 +334,11 @@ def handler(event, context):
     except Exception as e:
         logger.error("Unexpected error in alert processing: %s", e)
         return {"statusCode": 500, "error": "Internal error occurred"}
+    send_emails(generated_reports, all_customer_info)
+    return {
+        "statusCode": 200,
+        "message": "Alerts processed successfully",
+    }
 
 
 if __name__ == "__main__":
