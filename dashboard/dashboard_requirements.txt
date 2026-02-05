@@ -4,5 +4,5 @@ python-dotenv
 streamlit
 pandas
 altair
-psycopg2
+psycopg2-binary
 bcrypt
