@@ -89,16 +89,17 @@ def generate_price_chart(symbol: str, commodity_name: str,
     start_price = prices.iloc[0]
     end_price = prices.iloc[-1]
     change = end_price - start_price
-    change_symbol = "+" if change >= 0 else ""
     
     # Avoid division by zero if start_price is 0
     if start_price != 0:
         change_pct = (change / start_price) * 100
+        change_symbol = "+" if change_pct >= 0 else ""
         ax.annotate(f'{change_symbol}{change_pct:.2f}%',
                     xy=(times.iloc[-1], end_price),
                     fontsize=12, fontweight='bold', color=color)
     else:
         # Show absolute change when percentage can't be calculated
+        change_symbol = "+" if change >= 0 else "-"
         ax.annotate(f'{change_symbol}${abs(change):.2f}',
                     xy=(times.iloc[-1], end_price),
                     fontsize=12, fontweight='bold', color=color)
