@@ -3,9 +3,10 @@
 # pylint: disable=import-error
 
 import streamlit as st
+import pandas as pd
 
 from menu import menu_with_redirect
-from dashboard_items import account_entry_redirect
+from dashboard_items import page_redirect
 
 st.set_page_config(
     layout="wide"
@@ -25,11 +26,11 @@ if __name__ == "__main__":
     col1, col2 = st.columns(2)
 
     with col1:
-        account_entry_redirect("Edit Account Details",
-                               "pages/edit_account.py",
-                               "left")
+        page_redirect("Edit Account Details",
+                      "pages/edit_account.py",
+                      "left")
 
     with col2:
-        account_entry_redirect("Edit Subscriptions",
-                               "pages/edit_subscriptions.py",
-                               "right")
+        page_redirect("Edit Subscriptions",
+                      "pages/edit_subscriptions.py",
+                      "right")
