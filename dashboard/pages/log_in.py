@@ -9,9 +9,9 @@ from bcrypt import hashpw, gensalt
 from menu import menu
 from query_data import get_connection
 from dashboard_items import (build_form,
-                             account_entry_redirect)
-from query_data import (get_user_by_email_password,
-                        get_users_subscribed_commodities)
+                             page_redirect)
+from helper_functions import fill_user_commodities
+from query_data import (get_user_by_email_password)
 
 st.set_page_config(
     layout="centered"
@@ -32,9 +32,12 @@ def handle_login(conn, field_input):
     else:
         st.success(f"Welcome back, {user['user_name']}!")
 
-        st.session_state.subscribed_commodities = get_users_subscribed_commodities(
-            conn, user["user_id"])
+        fill_user_commodities(conn, user["user_id"])
+
         st.session_state.user = user
+
+        st.session_state.num_commodities = 1
+        st.session_state.selected_commodities = {}
 
         st.switch_page("dashboard.py")
 
@@ -73,5 +76,5 @@ if __name__ == "__main__":
 
     conn.close()
 
-    account_entry_redirect("Don't have an account? Sign up",
-                           "pages/sign_up.py")
+    page_redirect("Don't have an account? Sign up",
+                  "pages/sign_up.py")
