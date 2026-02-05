@@ -78,7 +78,7 @@ def build_form(conn: connection,
             on_cancel()
 
 
-def account_entry_redirect(msg: str, page: str, alignment: str = "center"):
+def page_redirect(msg: str, page: str, alignment: str = "center"):
     """Create a redirect button for account entry pages."""
 
     with st.container(horizontal_alignment=alignment):
@@ -86,7 +86,7 @@ def account_entry_redirect(msg: str, page: str, alignment: str = "center"):
             st.switch_page(page)
 
 
-def display_markdown_title(title: str, alignment: str = "center", size: int = 20, weight: int = 600):
+def display_markdown_title(title: str, alignment: str = "center", size: int = 21, weight: int = 600):
     """Display page title."""
     st.markdown(f"""
             <div style='text-align: {alignment}; font-size: {size}px; font-weight: {weight};'>
@@ -99,10 +99,10 @@ def build_single_commodity_edit(comm: dict) -> dict:
     """Build display for a single commodity."""
 
     col1, col2, col3, col4, col5, col6 = st.columns(
-        [2, 2, 2, 2, 3, 3],
+        [3, 2, 2, 2, 3, 3],
         vertical_alignment="center")
 
-    commodity_data = {}
+    commodity_data = {"name": comm["name"]}
 
     with col1:
         display_markdown_title(
@@ -111,26 +111,48 @@ def build_single_commodity_edit(comm: dict) -> dict:
     with col2:
         with st.container(horizontal_alignment="center"):
             commodity_data["track"] = st.checkbox(
-                "", key=f"track_{comm["id"]}")
+                "Track",
+                value=comm.get("track", False),
+                key=f"track_{comm["id"]}")
 
     with col3:
         with st.container(horizontal_alignment="center"):
             commodity_data["buy"] = st.checkbox(
-                "", key=f"buy_{comm["id"]}_alert", disabled=not commodity_data["track"])
+                "Buy",
+                value=comm["buy"],
+                key=f"buy_{comm["id"]}_alert",
+                disabled=not commodity_data["track"])
 
     with col4:
         with st.container(horizontal_alignment="center"):
             commodity_data["sell"] = st.checkbox(
-                "", key=f"sell_{comm["id"]}_alert", disabled=not commodity_data["track"])
+                "Sell",
+                value=comm["sell"],
+                key=f"sell_{comm["id"]}_alert",
+                disabled=not commodity_data["track"])
 
     with col5:
         with st.container(horizontal_alignment="center"):
             commodity_data["buy_price"] = st.number_input(
-                "Buy Price", min_value=0, key=f"buy_price_{comm["id"]}", disabled=not commodity_data["buy"])
+                "Buy Price",
+                value=comm["buy_price"],
+                min_value=0.0,
+                max_value=1000000.0,
+                step=0.01,
+                format="%.2f",
+                key=f"buy_price_{comm["id"]}",
+                disabled=not commodity_data["buy"])
 
     with col6:
         with st.container(horizontal_alignment="center"):
             commodity_data["sell_price"] = st.number_input(
-                "Sell Price", min_value=0, key=f"sell_price_{comm["id"]}", disabled=not commodity_data["sell"])
+                "Sell Price",
+                value=float(comm["sell_price"]),
+                min_value=0.0,
+                max_value=1000000.0,
+                step=0.01,
+                format="%.2f",
+                key=f"sell_price_{comm["id"]}",
+                disabled=not commodity_data["sell"])
 
     return commodity_data
