@@ -160,13 +160,18 @@ def send_emails(generated_reports: list[str], all_customer_info: list[dict]):
         img.add_header('Content-Disposition', 'inline', filename='logo.png')
         msg.attach(img)
 
-        response = ses_client.send_raw_email(
-            Source=sender_email,
-            Destinations=[info['email']],
-            RawMessage={'Data': msg.as_string()}
-        )
-        print(f"Email sent to {info['email']}: {response['MessageId']}")
-        update_alerted_at(info)
+        try:
+            response = ses_client.send_raw_email(
+                Source=sender_email,
+                Destinations=[info['email']],
+                RawMessage={'Data': msg.as_string()}
+            )
+            print(f"Email sent to {info['email']}: {response['MessageId']}")
+            update_alerted_at(info)
+        except Exception as e:
+            print(f"Failed to send email to {info['email']}: {str(e)}")
+            # Continue processing remaining alerts even if this one fails
+            continue
 
 
 def handler(event, context):
