@@ -54,3 +54,13 @@ variable "pipeline_schedule" {
   description = "Cron expression for pipeline execution schedule"
   type        = string
 }
+
+variable "report_schedule" {
+  description = "Cron expression for daily report execution schedule"
+  type        = string
+}
+
+variable "sender_email" {
+  description = "Email address to send reports from (must be verified in SES)"
+  type        = string
+}

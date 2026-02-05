@@ -69,12 +69,29 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+resource "aws_iam_role_policy" "lambda_ses" {
+  name = "c21-commodities-lambda-ses-policy"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "ses:SendEmail",
+        "ses:SendRawEmail"
+      ]
+      Resource = "*"
+    }]
+  })
+}
+
 resource "aws_lambda_function" "pipeline" {
   function_name = "c21-commodities-pipeline"
   role          = aws_iam_role.lambda_role.arn
   package_type  = "Image"
   image_uri     = "${aws_ecr_repository.pipeline.repository_url}:latest"
-  timeout       = 300
+  timeout       = 600
 
   environment {
     variables = {
@@ -105,4 +122,54 @@ resource "aws_lambda_permission" "eventbridge" {
   function_name = aws_lambda_function.pipeline.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.pipeline_trigger.arn
+}
+
+resource "aws_ecr_repository" "report" {
+  name                 = "c21-commodities-report"
+  image_tag_mutability = "MUTABLE"
+  force_delete         = true
+}
+
+resource "aws_lambda_function" "report" {
+  function_name = "c21-commodities-report"
+  role          = aws_iam_role.lambda_role.arn
+  package_type  = "Image"
+  image_uri     = "${aws_ecr_repository.report.repository_url}:latest"
+  timeout       = 600
+  memory_size   = 1024
+
+  environment {
+    variables = {
+      DB_HOST      = aws_db_instance.postgres.address
+      DB_PORT      = "5432"
+      DB_NAME      = var.db_name
+      DB_USER      = var.db_username
+      DB_PASSWORD  = var.db_password
+      MPLCONFIGDIR = "/tmp"
+      SENDER_EMAIL = var.sender_email
+    }
+  }
+}
+
+resource "aws_cloudwatch_event_rule" "report_trigger" {
+  name                = "c21-commodities-report-trigger"
+  schedule_expression = var.report_schedule
+}
+
+resource "aws_cloudwatch_event_target" "report_target" {
+  rule      = aws_cloudwatch_event_rule.report_trigger.name
+  target_id = "lambda"
+  arn       = aws_lambda_function.report.arn
+}
+
+resource "aws_lambda_permission" "report_eventbridge" {
+  statement_id  = "AllowEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.report.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.report_trigger.arn
+}
+
+resource "aws_ses_email_identity" "sender" {
+  email = var.sender_email
 }
