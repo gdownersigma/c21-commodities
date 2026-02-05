@@ -7,7 +7,8 @@ def authenticated_menu():
     """Show a navigation menu for authenticated users."""
 
     st.sidebar.page_link("dashboard.py", label="Home")
-    st.sidebar.page_link("pages/account_settings.py", label="Account Settings")
+    st.sidebar.page_link("pages/edit_subscriptions.py",
+                         label="Account Settings")
 
 
 def unauthenticated_menu():

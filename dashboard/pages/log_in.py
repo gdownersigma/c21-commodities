@@ -9,9 +9,13 @@ from bcrypt import hashpw, gensalt
 from menu import menu
 from query_data import get_connection
 from dashboard_items import (build_form,
-                             account_entry_redirect)
-from query_data import (get_user_by_email_password,
-                        get_users_subscribed_commodities)
+                             page_redirect)
+from helper_functions import fill_user_commodities
+from query_data import (get_user_by_email_password)
+
+st.set_page_config(
+    layout="centered"
+)
 
 
 def handle_login(conn, field_input):
@@ -28,19 +32,32 @@ def handle_login(conn, field_input):
     else:
         st.success(f"Welcome back, {user['user_name']}!")
 
-        st.session_state.subscribed_commodities = get_users_subscribed_commodities(
-            conn, user["user_id"])
+        fill_user_commodities(conn, user["user_id"])
+
         st.session_state.user = user
 
+        st.session_state.num_commodities = 1
+        st.session_state.selected_commodities = {}
+
         st.switch_page("dashboard.py")
+
+
+def handle_cancel():
+    """Handle cancel button logic."""
+
+    st.switch_page("dashboard.py")
 
 
 if __name__ == "__main__":
 
     menu()
 
-    st.title(body="Website Title",
+    st.title(body="Pivot Point",
              text_alignment="center")
+
+    st.divider()
+
+    st.header("Log In", text_alignment="center")
 
     conn = get_connection(ENV)
 
@@ -52,10 +69,12 @@ if __name__ == "__main__":
         },
         form_name="Log in",
         form_key="log_in_form",
-        on_submit=handle_login
+        cancel_name="Back to Dashboard",
+        on_submit=handle_login,
+        on_cancel=handle_cancel
     )
 
     conn.close()
 
-    account_entry_redirect("Don't have an account? Sign up",
-                           "pages/sign_up.py")
+    page_redirect("Don't have an account? Sign up",
+                  "pages/sign_up.py")

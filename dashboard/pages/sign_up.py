@@ -9,10 +9,15 @@ from bcrypt import hashpw, gensalt
 from menu import menu
 from query_data import get_connection
 from dashboard_items import (build_form,
-                             account_entry_redirect)
+                             page_redirect)
+from helper_functions import fill_user_commodities
 from query_data import (get_user_count_by_email,
                         create_user,
                         create_commodity_connections)
+
+st.set_page_config(
+    layout="centered"
+)
 
 
 def handle_signup(conn, field_input):
@@ -37,22 +42,45 @@ def handle_signup(conn, field_input):
 
         st.success(f"Welcome, {user['user_name']}!")
 
+        comm_data = []
+
+        for comm_id in [10, 18, 40]:
+            comm_data.append({
+                "user_id": user_id,
+                "commodity_id": comm_id,
+                "buy_price": 0.0,
+                "sell_price": 0.0
+            })
+
         create_commodity_connections(
             conn,
-            user_id,
-            [10, 18, 40]
+            comm_data
         )
 
+        fill_user_commodities(conn, user_id)
+
         st.session_state.user = user
+        st.session_state.num_commodities = 1
+        st.session_state.selected_commodities = {}
         st.switch_page("dashboard.py")
+
+
+def handle_cancel():
+    """Handle cancel button logic."""
+
+    st.switch_page("dashboard.py")
 
 
 if __name__ == "__main__":
 
     menu()
 
-    st.title(body="Website Title",
+    st.title(body="Pivot Point",
              text_alignment="center")
+
+    st.divider()
+
+    st.header("Sign Up", text_alignment="center")
 
     conn = get_connection(ENV)
 
@@ -65,10 +93,12 @@ if __name__ == "__main__":
         },
         form_name="Sign up",
         form_key="sign_up_form",
-        on_submit=handle_signup
+        cancel_name="Back to Dashboard",
+        on_submit=handle_signup,
+        on_cancel=handle_cancel
     )
 
     conn.close()
 
-    account_entry_redirect("Already have an account? Log in",
-                           "pages/log_in.py")
+    page_redirect("Already have an account? Log in",
+                  "pages/log_in.py")

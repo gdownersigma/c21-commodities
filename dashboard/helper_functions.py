@@ -4,6 +4,8 @@
 
 import streamlit as st
 
+from query_data import get_commodities_with_user_subscriptions
+
 
 def add_commodity():
     """Add a new commodity slot."""
@@ -43,3 +45,15 @@ def authenticate_user_input(user: dict) -> bool:
         if not authenticate_field(value):
             return False
     return True
+
+
+def fill_user_commodities(conn, user_id):
+    """Fill session state with user's subscribed commodities."""
+
+    comm_data = get_commodities_with_user_subscriptions(
+        conn, user_id)
+
+    st.session_state.user_commodities = comm_data
+
+    st.session_state.subscribed_commodities = [
+        comm_id for comm_id, data in comm_data.items() if data["track"]]
