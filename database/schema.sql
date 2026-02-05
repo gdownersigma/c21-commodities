@@ -23,7 +23,7 @@ CREATE TABLE user_commodities (
     commodity_id BIGINT REFERENCES commodities(commodity_id) ON DELETE CASCADE,
     buy_price FLOAT,
     sell_price FLOAT,
-    alerted_at TIMESTAMP
+    alerted_at TIMESTAMP DEFAULT NULL
 );
 
 CREATE TABLE market_records (
