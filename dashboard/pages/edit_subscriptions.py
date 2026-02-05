@@ -13,6 +13,7 @@ from dashboard_items import (display_markdown_title,
 from query_data import (get_connection,
                         create_commodity_connections,
                         delete_user_commodities,
+                        update_user_commodities,
                         get_commodities_with_user_subscriptions)
 
 st.set_page_config(
@@ -64,8 +65,8 @@ def build_subscription_table():
 
     with col1:
         with st.container(horizontal_alignment="center"):
-            st.button("Submit", on_click=handle_submit,
-                      args=(comm_data,))
+            if st.button("Submit"):
+                handle_submit(comm_data)
     with col2:
         page_redirect("Cancel",
                       "dashboard.py")
@@ -114,17 +115,19 @@ def handle_submit(new_comm):
                 update["commodity_id"] = comm_id
                 update_subscriptions.append(update)
 
-    print(f"Create: {create_subscriptions}")
-    print(f"Delete: {delete_subscriptions}")
-    print(f"Update: {update_subscriptions}")
-
     if not create_subscriptions and not delete_subscriptions and not update_subscriptions:
         st.error("No changes made.")
     else:
         conn = get_connection(ENV)
-        # call create, delete, update functions with data
-        create_commodity_connections(conn, create_subscriptions)
-        delete_user_commodities(conn, st.session_state.user["user_id"], delete_subscriptions)
+        
+        if create_subscriptions:
+            create_commodity_connections(conn, create_subscriptions)
+        
+        if delete_subscriptions:
+            delete_user_commodities(conn, st.session_state.user["user_id"], delete_subscriptions)
+        
+        if update_subscriptions:
+            update_user_commodities(conn, update_subscriptions)
 
         conn.close()
 
@@ -135,6 +138,8 @@ def handle_submit(new_comm):
 
         st.session_state.subscribed_commodities = [
             comm_id for comm_id, data in new_comm.items() if data["track"]]
+        
+        st.switch_page("dashboard.py")
 
 
 if __name__ == "__main__":
