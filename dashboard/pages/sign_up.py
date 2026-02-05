@@ -9,7 +9,8 @@ from bcrypt import hashpw, gensalt
 from menu import menu
 from query_data import get_connection
 from dashboard_items import (build_form,
-                             account_entry_redirect)
+                             page_redirect)
+from helper_functions import fill_user_commodities
 from query_data import (get_user_count_by_email,
                         create_user,
                         create_commodity_connections)
@@ -41,13 +42,26 @@ def handle_signup(conn, field_input):
 
         st.success(f"Welcome, {user['user_name']}!")
 
+        comm_data = []
+
+        for comm_id in [10, 18, 40]:
+            comm_data.append({
+                "user_id": user_id,
+                "commodity_id": comm_id,
+                "buy_price": 0.0,
+                "sell_price": 0.0
+            })
+
         create_commodity_connections(
             conn,
-            user_id,
-            [10, 18, 40]
+            comm_data
         )
 
+        fill_user_commodities(conn, user_id)
+
         st.session_state.user = user
+        st.session_state.num_commodities = 1
+        st.session_state.selected_commodities = {}
         st.switch_page("dashboard.py")
 
 
@@ -86,5 +100,5 @@ if __name__ == "__main__":
 
     conn.close()
 
-    account_entry_redirect("Already have an account? Log in",
-                           "pages/log_in.py")
+    page_redirect("Already have an account? Log in",
+                  "pages/log_in.py")
