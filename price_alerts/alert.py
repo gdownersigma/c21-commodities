@@ -38,6 +38,7 @@ def get_user_commodities() -> list[dict]:
     Raises:
         DatabaseError: If database query fails
     """
+    conn = None
     try:
         conn = get_conn()
         query = """
@@ -59,7 +60,7 @@ def get_user_commodities() -> list[dict]:
         logger.error("Database error fetching user commodities: %s", e)
         raise
     finally:
-        if 'conn' in locals():
+        if conn is not None:
             conn.close()
 
 
@@ -108,6 +109,7 @@ def get_required_customer_info(action: tuple, latest_prices: dict) -> dict:
     user_id = user_commodity['user_id']
     commodity_id = user_commodity['commodity_id']
 
+    conn = None
     try:
         conn = get_conn()
         cur = conn.cursor()
@@ -148,7 +150,7 @@ def get_required_customer_info(action: tuple, latest_prices: dict) -> dict:
                     user_id, commodity_id, e)
         raise
     finally:
-        if 'conn' in locals():
+        if conn is not None:
             conn.close()
 
 
@@ -166,11 +168,19 @@ def get_all_required_customer_info(actions: list[tuple], latest_prices: dict) ->
         try:
             info = get_required_customer_info(action, latest_prices)
             customer_info_list.append(info)
-        except (DatabaseError, OperationalError, ValueError) as e:
-            # Log error and continue with next alert
+        except ValueError as e:
+            # Data not found - log as warning and continue
             _, user_commodity = action
             logger.warning(
-                "Skipping alert for user_id=%s, commodity_id=%s: %s",
+                "Skipping alert for user_id=%s, commodity_id=%s - data not found: %s",
+                user_commodity['user_id'], user_commodity['commodity_id'], e
+            )
+            continue
+        except (DatabaseError, OperationalError) as e:
+            # Database error - log as error and continue
+            _, user_commodity = action
+            logger.error(
+                "Skipping alert for user_id=%s, commodity_id=%s - database error: %s",
                 user_commodity['user_id'], user_commodity['commodity_id'], e
             )
             continue
@@ -190,6 +200,7 @@ def update_alerted_at(user_commodity: dict):
     user_id = user_commodity['user_id']
     commodity_id = user_commodity['commodity_id']
 
+    conn = None
     try:
         conn = get_conn()
         cur = conn.cursor()
@@ -210,7 +221,7 @@ def update_alerted_at(user_commodity: dict):
                     user_id, commodity_id, e)
         raise
     finally:
-        if 'conn' in locals():
+        if conn is not None:
             conn.close()
 
 
@@ -271,7 +282,7 @@ def send_emails(generated_reports: list[str], all_customer_info: list[dict]):
             # Continue processing other emails even if one fails
 
 
-def handler(event, _context):
+def handler(event, context):
     """AWS Lambda handler function for processing price alerts"""
     load_dotenv()
 
