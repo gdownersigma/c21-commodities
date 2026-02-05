@@ -1,4 +1,5 @@
 SELECT
+	uc.user_id,
     c.commodity_id,
     c.commodity_name,
     COALESCE(uc.buy_price, 0) as buy_price,

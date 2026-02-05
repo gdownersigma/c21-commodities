@@ -73,6 +73,45 @@ def get_user_by_email_password(_conn: connection, email: str, hashed_password: b
 
 
 @st.cache_data(ttl=600)
+def get_users_commodity_ids(_conn: connection, user_id: str) -> list[int]:
+    """Return a user's subscribed commodities from the database."""
+
+    query = sql.SQL(load_query("get_users_commodity_ids.sql"))
+
+    with _conn.cursor() as cur:
+        cur.execute(query, (user_id,))
+
+        data = cur.fetchall()
+
+    return [item["commodity_id"] for item in data]
+
+
+@st.cache_data(ttl=600)
+def get_commodities_with_user_subscriptions(_conn: connection, user_id: str) -> dict:
+    """Return a user's subscribed commodities from the database."""
+
+    query = sql.SQL(load_query("get_commodities_with_user_subscriptions.sql"))
+
+    with _conn.cursor() as cur:
+        cur.execute(query, (user_id,))
+
+        data = cur.fetchall()
+
+    new_data = {}
+    for item in data:
+        new_data[item["commodity_id"]] = {
+            "name": item["commodity_name"],
+            "track": item["user_id"] is not None,
+            "buy": item["buy_price"] != 0,
+            "sell": item["sell_price"] != 0,
+            "buy_price": item["buy_price"],
+            "sell_price": item["sell_price"]
+        }
+
+    return new_data
+
+
+@st.cache_data(ttl=600)
 def create_user(_conn: connection, field_input: dict) -> int:
     """Insert a new user into the database."""
 
@@ -91,27 +130,14 @@ def create_user(_conn: connection, field_input: dict) -> int:
 
 
 @st.cache_data(ttl=600)
-def get_users_subscribed_commodities(_conn: connection, user_id: str) -> list[int]:
-    """Return a user's subscribed commodities from the database."""
-
-    query = sql.SQL(load_query("get_users_subscribed_commodities.sql"))
-
-    with _conn.cursor() as cur:
-        cur.execute(query, (user_id,))
-
-        data = cur.fetchall()
-
-    return [item["commodity_id"] for item in data]
-
-
-@st.cache_data(ttl=600)
-def create_commodity_connections(_conn: connection, user_id: str, commodity_ids: list[int]):
+def create_commodity_connections(_conn: connection, comm_data: list[dict]):
     """Create connections between a user and multiple commodities."""
 
     query = sql.SQL(load_query("create_commodity_connections.sql"))
 
     with _conn.cursor() as cur:
-        data = [(user_id, id) for id in commodity_ids]
+        data = [(item["user_id"], item["commodity_id"],
+                 item["buy_price"], item["sell_price"]) for item in comm_data]
         cur.executemany(query, data)
 
     _conn.commit()
@@ -123,23 +149,7 @@ if __name__ == "__main__":
 
     conn = get_connection(ENV)
 
-    # commodity_ids = [1, 2, 3]
-
-    # df = get_commodity_data_by_ids(conn, commodity_ids)
-
-    # data = get_users_subscribed_commodities(conn, "bob.wilson@example.com")
-    # print(data)
-
-    user_id = create_user(
-        conn,
-        {
-            "name": "Test User",
-            "email": "test.user@example.com",
-            "hashed_password": "password"
-        }
-    )
-
-    print(user_id)
-    print(type(user_id))
+    data = get_commodities_with_user_subscriptions(conn, 16)
+    print(data)
 
     conn.close()
