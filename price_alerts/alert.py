@@ -3,52 +3,11 @@
 from os import environ as ENV
 from dotenv import load_dotenv
 from psycopg2 import connect
-from generate_alert import generate_alert_email, save_test_email
-test_global_event = {
-    "statusCode": 200,
-    "body": [
-        {
-            "commodity_id": 10,
-            "price": 67.39
-        },
-        {
-            "commodity_id": 21,
-            "price": 303.75
-        },
-        {
-            "commodity_id": 24,
-            "price": 6951.75
-        },
-        {
-            "commodity_id": 27,
-            "price": 2261.1
-        },
-        {
-            "commodity_id": 40,
-            "price": 89.27
-        },
-        {
-            "commodity_id": 8,
-            "price": 6.038
-        },
-        {
-            "commodity_id": 17,
-            "price": 3.359
-        },
-        {
-            "commodity_id": 18,
-            "price": 5048.3
-        },
-        {
-            "commodity_id": 12,
-            "price": 63.35
-        },
-        {
-            "commodity_id": 22,
-            "price": 25459.25
-        }
-    ]
-}
+from generate_alert import generate_alert_email, get_logo_bytes
+import boto3
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 
 
 def get_conn():
@@ -141,7 +100,9 @@ def get_required_customer_info(action: tuple, latest_prices: dict) -> dict:
         "symbol": row[2],
         "commodity_name": row[3],
         "current_price": latest_prices[commodity_id]['price'],
-        "target_price": user_commodity['buy_price'] if alert_type == 'buy' else user_commodity['sell_price']
+        "target_price": user_commodity['buy_price'] if alert_type == 'buy' else user_commodity['sell_price'],
+        "user_id": user_commodity['user_id'],  # Add this
+        "commodity_id": commodity_id  # Add this
     }
 
 
@@ -164,16 +125,62 @@ def update_alerted_at(user_commodity: dict):
     conn.close()
 
 
-if __name__ == "__main__":
+def get_generated_report_list(all_customer_info: list[dict]) -> list[str]:
+    """Generate alert emails for all customer info and return as list of HTML strings"""
+    return [generate_alert_email(info) for info in all_customer_info]
+
+
+def send_emails(generated_reports: list[str], all_customer_info: list[dict]):
+    """Send alert emails using AWS SES with embedded logo"""
+    ses_client = boto3.client('ses', region_name='eu-west-2')
+    sender_email = ENV.get("SENDER_EMAIL")
+    logo_bytes = get_logo_bytes()
+
+    for report, info in zip(generated_reports, all_customer_info):
+        print(info)
+        verified_emails = ses_client.list_verified_email_addresses()[
+            'VerifiedEmailAddresses']
+        if info['email'] not in verified_emails:
+            print(f"Email {info['email']} is not verified in SES. Skipping.")
+            continue
+
+        # Create MIME message with embedded image
+        msg = MIMEMultipart('related')
+        msg['Subject'] = f"Price Alert for {info['commodity_name']}"
+        msg['From'] = sender_email
+        msg['To'] = info['email']
+
+        # Attach HTML content
+        html_part = MIMEText(report, 'html')
+        msg.attach(html_part)
+
+        # Attach logo image
+        img = MIMEImage(logo_bytes)
+        img.add_header('Content-ID', '<logo>')
+        img.add_header('Content-Disposition', 'inline', filename='logo.png')
+        msg.attach(img)
+
+        response = ses_client.send_raw_email(
+            Source=sender_email,
+            Destinations=[info['email']],
+            RawMessage={'Data': msg.as_string()}
+        )
+        print(f"Email sent to {info['email']}: {response['MessageId']}")
+        update_alerted_at(info)
+
+
+def handler(event, context):
     load_dotenv()
     user_commodities = get_user_commodities()
-    # print(user_commodities[0])  # Placeholder for actual alert logic
-    latest_prices = get_latest_prices(test_global_event)
+    latest_prices = get_latest_prices(event)
 
     all_actions = check_all_alerts(user_commodities, latest_prices)
     all_customer_info = get_all_required_customer_info(
         all_actions, latest_prices)
-    print(all_customer_info[0])  # Placeholder for actual alert logic
-    for info in all_customer_info:
-        save_test_email(
-            info, filename=f"test_email_{info['user_name']}_{info['alert_type']}.html")
+    generated_reports = get_generated_report_list(all_customer_info)
+
+    send_emails(generated_reports, all_customer_info)
+
+
+if __name__ == "__main__":
+    handler('fake event', None)
