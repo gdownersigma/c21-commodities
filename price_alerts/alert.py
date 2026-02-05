@@ -137,7 +137,6 @@ def send_emails(generated_reports: list[str], all_customer_info: list[dict]):
     logo_bytes = get_logo_bytes()
 
     for report, info in zip(generated_reports, all_customer_info):
-        print(info)
         verified_emails = ses_client.list_verified_email_addresses()[
             'VerifiedEmailAddresses']
         if info['email'] not in verified_emails:
