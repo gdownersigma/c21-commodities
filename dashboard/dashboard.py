@@ -21,13 +21,20 @@ if "user" not in st.session_state:
     st.session_state.user = {}
 
 if "num_commodities" not in st.session_state:
-    st.session_state.num_commodities = 1
+    st.session_state.num_commodities = 3
 
 if "selected_commodities" not in st.session_state:
-    st.session_state.selected_commodities = {}
+    st.session_state.selected_commodities = {
+        "commodity_0": [10, "Brent Crude Oil"],
+        "commodity_1": [18, "Gold Futures"],
+        "commodity_2": [40, "Silver Futures"]
+    }
 
 if "subscribed_commodities" not in st.session_state:
     st.session_state.subscribed_commodities = [10, 18, 40]
+
+if "user_commodities" not in st.session_state:
+    st.session_state.user_commodities = {}
 
 
 def build_sidebar(df: pd.DataFrame):
@@ -38,8 +45,12 @@ def build_sidebar(df: pd.DataFrame):
                              key="logout_btn"):
             st.session_state.user = {}
             st.session_state.subscribed_commodities = [10, 18, 40]
-            st.session_state.selected_commodities = {}
-            st.session_state.num_commodities = 1
+            st.session_state.selected_commodities = {
+                "commodity_0": [10, "Brent Crude Oil"],
+                "commodity_1": [18, "Gold Futures"],
+                "commodity_2": [40, "Silver Futures"]
+            }
+            st.session_state.num_commodities = 3
             st.rerun()
 
     st.sidebar.divider()
@@ -54,33 +65,34 @@ def build_sidebar(df: pd.DataFrame):
         end_date = st.date_input("End Date",
                                  key="end_date_input")
 
-    st.sidebar.divider()
+    if st.session_state.user:
+        st.sidebar.divider()
 
-    st.sidebar.header("Select Commodities")
+        st.sidebar.header("Select Commodities")
 
-    commodity_options = df[["commodity_id",
-                            "commodity_name"]].drop_duplicates().values.tolist()
+        commodity_options = df[["commodity_id",
+                                "commodity_name"]].drop_duplicates().values.tolist()
 
-    for i in range(st.session_state.num_commodities):
-        add_commodity_selector(commodity_options, i)
+        for i in range(st.session_state.num_commodities):
+            add_commodity_selector(commodity_options, i)
 
-    st.sidebar.divider()
+        st.sidebar.divider()
 
-    col1, col2 = st.sidebar.columns(2)
-    with col1:
-        st.button("➕ Add",
-                  on_click=add_commodity,
-                  disabled=(st.session_state.num_commodities >= min(
-                      len(st.session_state.subscribed_commodities), 10)
-                  ),
-                  use_container_width=True,
-                  key="add_commodity_btn")
-    with col2:
-        st.button("➖ Remove",
-                  on_click=remove_commodity,
-                  disabled=(st.session_state.num_commodities <= 1),
-                  use_container_width=True,
-                  key="remove_commodity_btn")
+        col1, col2 = st.sidebar.columns(2)
+        with col1:
+            st.button("➕ Add",
+                    on_click=add_commodity,
+                    disabled=(st.session_state.num_commodities >= min(
+                        len(st.session_state.subscribed_commodities), 10)
+                    ),
+                    use_container_width=True,
+                    key="add_commodity_btn")
+        with col2:
+            st.button("➖ Remove",
+                    on_click=remove_commodity,
+                    disabled=(st.session_state.num_commodities <= 1),
+                    use_container_width=True,
+                    key="remove_commodity_btn")
 
     return start_date, end_date
 
@@ -138,9 +150,10 @@ if __name__ == "__main__":
 
     start_date, end_date = build_sidebar(df)
 
-    display_key_metrics(df)
+    if st.session_state.user:
+        display_key_metrics(df)
 
-    if st.session_state.num_commodities > 1:
-        display_combined_graph(df)
+        if st.session_state.num_commodities > 1:
+            display_combined_graph(df)
 
     display_individual_graphs(df)
