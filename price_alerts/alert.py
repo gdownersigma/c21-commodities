@@ -169,7 +169,6 @@ def send_emails(generated_reports: list[str], all_customer_info: list[dict]):
 
 
 def handler(event, context):
-    load_dotenv()
     user_commodities = get_user_commodities()
     latest_prices = get_latest_prices(event)
 
