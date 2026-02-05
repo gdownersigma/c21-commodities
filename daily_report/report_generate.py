@@ -96,6 +96,13 @@ def generate_price_chart(symbol: str, commodity_name: str,
         ax.annotate(f'{change_symbol}{change_pct:.2f}%',
                     xy=(times.iloc[-1], end_price),
                     fontsize=12, fontweight='bold', color=color)
+    else:
+        # Show absolute change when percentage can't be calculated
+        change = end_price - start_price
+        change_symbol = "+" if change >= 0 else ""
+        ax.annotate(f'{change_symbol}${change:.2f}',
+                    xy=(times.iloc[-1], end_price),
+                    fontsize=12, fontweight='bold', color=color)
 
     plt.tight_layout()
 
