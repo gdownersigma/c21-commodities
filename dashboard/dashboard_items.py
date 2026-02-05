@@ -44,12 +44,6 @@ def build_form(conn: connection,
     """Build a form for log in and sign up pages."""
 
     with st.form(key=form_key):
-
-        # st.header(body=form_name,
-        #           text_alignment="center")
-
-        # st.divider()
-
         field_input = {}
         for label, input_type in field_labels.items():
             field_input[label] = st.text_input(label.capitalize(),
