@@ -1,7 +1,9 @@
 """Script to generate HTML reports for each user from extracted data."""
 import os
-import base64
 from io import BytesIO
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 import boto3
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -13,11 +15,11 @@ from report_extract import (
 )
 
 
-def get_logo_base64() -> str:
-    """Load logo and return as base64 encoded string."""
+def get_logo_bytes() -> bytes:
+    """Load logo and return as bytes."""
     logo_path = os.path.join(os.path.dirname(__file__), "Logo.png")
     with open(logo_path, "rb") as f:
-        return base64.b64encode(f.read()).decode('utf-8')
+        return f.read()
 
 
 def get_user_market_data(user_id: int, market_df: pd.DataFrame,
@@ -52,13 +54,13 @@ def format_name(name: str) -> str:
 
 
 def generate_price_chart(symbol: str, commodity_name: str,
-                         market_df: pd.DataFrame) -> str:
-    """Generate a price chart for a commodity and return as base64 image."""
+                         market_df: pd.DataFrame) -> tuple[str, bytes] | None:
+    """Generate a price chart for a commodity and return as (cid, bytes)."""
     commodity_data = market_df[market_df["symbol"] == symbol].copy()
     commodity_data = commodity_data.sort_values("recorded_at")
 
     if len(commodity_data) < 2:
-        return ""
+        return None
 
     plt.style.use('seaborn-v0_8-whitegrid')
     fig, ax = plt.subplots(figsize=(10, 4))
@@ -87,7 +89,7 @@ def generate_price_chart(symbol: str, commodity_name: str,
     start_price = prices.iloc[0]
     end_price = prices.iloc[-1]
     if start_price == 0:
-        # Avoid division by zero; treat change as 0% when starting price is zero.
+        # Avoid division by zero; treat change as 0% if the starting price is zero.
         change_pct = 0.0
     else:
         change_pct = ((end_price - start_price) / start_price) * 100
@@ -101,10 +103,11 @@ def generate_price_chart(symbol: str, commodity_name: str,
     buffer = BytesIO()
     plt.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
     buffer.seek(0)
-    image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+    image_bytes = buffer.read()
     plt.close(fig)
 
-    return f'<img src="data:image/png;base64,{image_base64}" alt="{commodity_name} price chart" style="max-width:100%; margin: 10px 0;">'
+    cid = f"chart_{symbol.replace('/', '_')}"
+    return (cid, image_bytes)
 
 
 def calculate_profit_loss(row: pd.Series) -> dict:
@@ -121,42 +124,46 @@ def calculate_profit_loss(row: pd.Series) -> dict:
 
 
 def generate_user_html_report(user_name: str, user_data: pd.DataFrame,
-                              report_date, market_df: pd.DataFrame) -> str:
-    """Generate HTML report for a single user."""
+                              report_date, market_df: pd.DataFrame) -> dict:
+    """Generate HTML report for a single user. Returns dict with html and images."""
 
     rows_html = ""
     charts_html = ""
+    images = {}
+
     for _, row in user_data.iterrows():
         pl = calculate_profit_loss(row)
 
         change = row["close_price"] - row["open_price_calc"]
         change_pct = (change / row["open_price_calc"]) * 100
-        change_class = "positive" if change >= 0 else "negative"
+        change_color = "#28a745" if change >= 0 else "#dc3545"
         change_symbol = "+" if change >= 0 else ""
 
         pl_html = "-"
         if pl["profit_loss"] is not None:
-            pl_class = "positive" if pl["profit_loss"] >= 0 else "negative"
+            pl_color = "#28a745" if pl["profit_loss"] >= 0 else "#dc3545"
             pl_symbol = "+" if pl["profit_loss"] >= 0 else ""
-            pl_html = f'<span class="{pl_class}">{pl_symbol}${pl["profit_loss"]:.2f} ({pl_symbol}{pl["profit_loss_pct"]:.2f}%)</span>'
+            pl_html = f'<span style="color: {pl_color}; font-weight: bold;">{pl_symbol}${pl["profit_loss"]:.2f} ({pl_symbol}{pl["profit_loss_pct"]:.2f}%)</span>'
 
         rows_html += f"""
         <tr>
-            <td><strong>{row['commodity_name']}</strong><br><small>{row['symbol']}</small></td>
-            <td>${row['open_price_calc']:.2f}</td>
-            <td>${row['close_price']:.2f}</td>
-            <td class="{change_class}">{change_symbol}{change:.2f} ({change_symbol}{change_pct:.2f}%)</td>
-            <td>${row['day_low']:.2f}</td>
-            <td>${row['day_high']:.2f}</td>
-            <td>{int(row['volume']):,}</td>
-            <td>{pl_html}</td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #eee;"><strong>{row['commodity_name']}</strong><br><small style="color: #666;">{row['symbol']}</small></td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #eee;">${row['open_price_calc']:.2f}</td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #eee;">${row['close_price']:.2f}</td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #eee; color: {change_color}; font-weight: bold;">{change_symbol}{change:.2f} ({change_symbol}{change_pct:.2f}%)</td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #eee;">${row['day_low']:.2f}</td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #eee;">${row['day_high']:.2f}</td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #eee;">{int(row['volume']):,}</td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #eee;">{pl_html}</td>
         </tr>
         """
 
-        chart = generate_price_chart(
+        chart_result = generate_price_chart(
             row['symbol'], row['commodity_name'], market_df)
-        if chart:
-            charts_html += f'<div class="chart-container">{chart}</div>'
+        if chart_result:
+            cid, img_bytes = chart_result
+            images[cid] = img_bytes
+            charts_html += f'<div style="margin: 15px 0; padding: 10px; border-bottom: 1px solid #eee;"><img src="cid:{cid}" alt="{row["commodity_name"]} price chart" style="max-width:100%;"/></div>'
 
     html = f"""
 <!DOCTYPE html>
@@ -164,149 +171,71 @@ def generate_user_html_report(user_name: str, user_data: pd.DataFrame,
 <head>
     <meta charset="UTF-8">
     <title>Daily Commodities Report - {report_date}</title>
-    <style>
-        body {{
-            font-family: Arial, sans-serif;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }}
-        .header {{
-            background: white;
-            color: #333;
-            padding: 30px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }}
-        .header-logo {{
-            width: 120px;
-            height: 120px;
-            flex-shrink: 0;
-        }}
-        .header-content {{
-            flex-grow: 1;
-        }}
-        .header h1 {{
-            margin: 0 0 10px 0;
-        }}
-        .header p {{
-            margin: 5px 0;
-            opacity: 0.9;
-        }}
-        .summary {{
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }}
-        table {{
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }}
-        th {{
-            background: #F7941D;
-            color: white;
-            padding: 15px 10px;
-            text-align: left;
-        }}
-        td {{
-            padding: 12px 10px;
-            border-bottom: 1px solid #eee;
-        }}
-        tr:hover {{
-            background-color: #f8f9fa;
-        }}
-        .positive {{
-            color: #28a745;
-            font-weight: bold;
-        }}
-        .negative {{
-            color: #dc3545;
-            font-weight: bold;
-        }}
-        .footer {{
-            text-align: center;
-            padding: 20px;
-            color: #666;
-            font-size: 12px;
-        }}
-        .charts-section {{
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-top: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }}
-        .charts-section h3 {{
-            margin-top: 0;
-            color: #1DAEEC;
-        }}
-        .chart-container {{
-            margin: 15px 0;
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-        }}
-        .chart-container:last-child {{
-            border-bottom: none;
-        }}
-    </style>
 </head>
-<body>
-    <div class="header">
-        <img class="header-logo" src="data:image/png;base64,{get_logo_base64()}" alt="Pivot Point Logo"/>
-        <div class="header-content">
-            <h1>📊 Daily Commodities Report</h1>
-            <p>Hello, {format_name(user_name)}!</p>
-            <p>Report Date: {report_date.strftime('%B %d, %Y')}</p>
-        </div>
-    </div>
-    
-    <div class="summary">
-        <h3>Your Tracked Commodities</h3>
-        <p>You are tracking <strong>{len(user_data)}</strong> commodities.</p>
-    </div>
-    
-    <table>
-        <thead>
-            <tr>
-                <th>Commodity</th>
-                <th>Open Price</th>
-                <th>Close Price</th>
-                <th>Change</th>
-                <th>Day Low</th>
-                <th>Day High</th>
-                <th>Volume</th>
-                <th>Potential P/L</th>
-            </tr>
-        </thead>
-        <tbody>
-            {rows_html}
-        </tbody>
+<body style="font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background: white; border-radius: 10px; margin-bottom: 20px;">
+        <tr>
+            <td style="padding: 30px;">
+                <table cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td style="vertical-align: middle; padding-right: 20px;">
+                            <img src="cid:logo" alt="Pivot Point Logo" width="80" height="80" style="display: block; width: 80px; height: 80px; max-width: 80px;"/>
+                        </td>
+                        <td style="vertical-align: middle;">
+                            <h1 style="margin: 0 0 10px 0; color: #333;">📊 Daily Commodities Report</h1>
+                            <p style="margin: 5px 0; color: #333;">Hello, {format_name(user_name)}!</p>
+                            <p style="margin: 5px 0; color: #333;">Report Date: {report_date.strftime('%B %d, %Y')}</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
     </table>
     
-    <div class="charts-section">
-        <h3>📈 Price Charts</h3>
-        {charts_html}
-    </div>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background: white; border-radius: 10px; margin-bottom: 20px;">
+        <tr>
+            <td style="padding: 20px;">
+                <h3 style="margin: 0 0 10px 0; color: #333;">Your Tracked Commodities</h3>
+                <p style="margin: 0; color: #333;">You are tracking <strong>{len(user_data)}</strong> commodities.</p>
+            </td>
+        </tr>
+    </table>
     
-    <div class="footer">
-        <p>This report was automatically generated by Pivot Point.</p>
-        <p>Data as of {report_date}</p>
-    </div>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background: white; border-radius: 10px; border-collapse: collapse;">
+        <tr style="background: #F7941D;">
+            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Commodity</th>
+            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Open</th>
+            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Close</th>
+            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Change</th>
+            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Low</th>
+            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">High</th>
+            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Volume</th>
+            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">P/L</th>
+        </tr>
+        {rows_html}
+    </table>
+    
+    <table width="100%" cellpadding="0" cellspacing="0" style="background: white; border-radius: 10px; margin-top: 20px;">
+        <tr>
+            <td style="padding: 20px;">
+                <h3 style="margin: 0 0 15px 0; color: #1DAEEC;">📈 Price Charts</h3>
+                {charts_html}
+            </td>
+        </tr>
+    </table>
+    
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
+                <p style="margin: 5px 0;">This report was automatically generated by Pivot Point.</p>
+                <p style="margin: 5px 0;">Data as of {report_date}</p>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>
 """
-    return html
+    return {"html": html, "images": images}
 
 
 def generate_all_user_reports() -> dict:
@@ -342,24 +271,34 @@ def generate_all_user_reports() -> dict:
     return reports
 
 
-def send_email(ses_client, sender: str, recipient: str, html: str) -> bool:
-    """Send email via SES."""
+def send_email(ses_client, sender: str, recipient: str, report_data: dict) -> bool:
+    """Send email via SES with embedded images using MIME."""
     try:
-        ses_client.send_email(
+        msg = MIMEMultipart('related')
+        msg['Subject'] = "Your Daily Commodity Report - Pivot Point"
+        msg['From'] = sender
+        msg['To'] = recipient
+
+        html_part = MIMEText(report_data["html"], 'html')
+        msg.attach(html_part)
+
+        logo_img = MIMEImage(get_logo_bytes())
+        logo_img.add_header('Content-ID', '<logo>')
+        logo_img.add_header('Content-Disposition',
+                            'inline', filename='logo.png')
+        msg.attach(logo_img)
+
+        for cid, img_bytes in report_data["images"].items():
+            img = MIMEImage(img_bytes)
+            img.add_header('Content-ID', f'<{cid}>')
+            img.add_header('Content-Disposition',
+                           'inline', filename=f'{cid}.png')
+            msg.attach(img)
+
+        ses_client.send_raw_email(
             Source=sender,
-            Destination={"ToAddresses": [recipient]},
-            Message={
-                "Subject": {
-                    "Data": "Your Daily Commodity Report - Pivot Point",
-                    "Charset": "UTF-8"
-                },
-                "Body": {
-                    "Html": {
-                        "Data": html,
-                        "Charset": "UTF-8"
-                    }
-                }
-            }
+            Destinations=[recipient],
+            RawMessage={'Data': msg.as_string()}
         )
         print(f"Email sent to {recipient}")
         return True
@@ -387,8 +326,8 @@ def handler(event, context):
     ses_client = boto3.client("ses", region_name="eu-west-2")
     emails_sent = 0
 
-    for email, html in reports.items():
-        if send_email(ses_client, sender_email, email, html):
+    for email, report_data in reports.items():
+        if send_email(ses_client, sender_email, email, report_data):
             emails_sent += 1
 
     print(f"Sent {emails_sent}/{len(reports)} emails.")
