@@ -3,7 +3,7 @@ FROM public.ecr.aws/lambda/python:3.12
 WORKDIR ${LAMBDA_TASK_ROOT}
 
 COPY historical_requirements.txt .
-RUN pip install -r historical_requirements.txt
+RUN pip install --no-cache-dir -r historical_requirements.txt
 
 COPY historical_extract.py .
 
