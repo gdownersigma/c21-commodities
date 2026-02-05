@@ -52,7 +52,8 @@ def get_user_commodities() -> list[dict]:
             rows = cur.fetchall()
             columns = [desc[0] for desc in cur.description]
             result = [dict(zip(columns, row)) for row in rows]
-            logger.info("Retrieved %d user commodities for alert checking", len(result))
+            logger.info(
+                "Retrieved %d user commodities for alert checking", len(result))
             return result
         finally:
             cur.close()
@@ -128,7 +129,7 @@ def get_required_customer_info(action: tuple, latest_prices: dict) -> dict:
 
             if row is None:
                 logger.error("No customer info found for user_id=%s, commodity_id=%s",
-                            user_id, commodity_id)
+                             user_id, commodity_id)
                 raise ValueError(
                     f"No customer info found for user_id={user_id}, commodity_id={commodity_id}"
                 )
@@ -148,7 +149,7 @@ def get_required_customer_info(action: tuple, latest_prices: dict) -> dict:
             cur.close()
     except (DatabaseError, OperationalError) as e:
         logger.error("Database error getting customer info for user_id=%s, commodity_id=%s: %s",
-                    user_id, commodity_id, e)
+                     user_id, commodity_id, e)
         raise
     finally:
         if conn is not None:
@@ -214,12 +215,12 @@ def update_alerted_at(user_commodity: dict):
             """, (user_id, commodity_id))
             conn.commit()
             logger.info("Updated alerted_at for user_id=%s, commodity_id=%s",
-                       user_id, commodity_id)
+                        user_id, commodity_id)
         finally:
             cur.close()
     except (DatabaseError, OperationalError) as e:
         logger.error("Database error updating alerted_at for user_id=%s, commodity_id=%s: %s",
-                    user_id, commodity_id, e)
+                     user_id, commodity_id, e)
         raise
     finally:
         if conn is not None:
@@ -244,7 +245,8 @@ def send_emails(generated_reports: list[str], all_customer_info: list[dict]):
             verified_emails = ses_client.list_verified_email_addresses()[
                 'VerifiedEmailAddresses']
             if info['email'] not in verified_emails:
-                logger.warning("Email %s is not verified in SES. Skipping.", info['email'])
+                logger.warning(
+                    "Email %s is not verified in SES. Skipping.", info['email'])
                 continue
 
             # Create MIME message with embedded image
@@ -260,7 +262,8 @@ def send_emails(generated_reports: list[str], all_customer_info: list[dict]):
             # Attach logo image
             img = MIMEImage(logo_bytes)
             img.add_header('Content-ID', '<logo>')
-            img.add_header('Content-Disposition', 'inline', filename='logo.png')
+            img.add_header('Content-Disposition',
+                           'inline', filename='logo.png')
             msg.attach(img)
 
             response = ses_client.send_raw_email(
@@ -268,24 +271,20 @@ def send_emails(generated_reports: list[str], all_customer_info: list[dict]):
                 Destinations=[info['email']],
                 RawMessage={'Data': msg.as_string()}
             )
-            logger.info("Email sent to %s: %s", info['email'], response['MessageId'])
+            logger.info("Email sent to %s: %s",
+                        info['email'], response['MessageId'])
 
             # Update alerted_at timestamp
             try:
                 update_alerted_at(info)
             except (DatabaseError, OperationalError) as e:
                 logger.error("Failed to update alerted_at after sending email to %s: %s",
-                            info['email'], e)
+                             info['email'], e)
                 # Continue processing other emails even if update fails
 
         except Exception as e:
             logger.error("Failed to send email to %s: %s", info['email'], e)
             # Continue processing other emails even if one fails
-        verified_emails = ses_client.list_verified_email_addresses()[
-            'VerifiedEmailAddresses']
-        if info['email'] not in verified_emails:
-            print(f"Email {info['email']} is not verified in SES. Skipping.")
-            continue
 
 
 def handler(event, context):
@@ -302,7 +301,7 @@ def handler(event, context):
 
         latest_prices = get_latest_prices(event)
         logger.info("Processing %d user commodities against %d price updates",
-                   len(user_commodities), len(latest_prices))
+                    len(user_commodities), len(latest_prices))
 
         all_actions = check_all_alerts(user_commodities, latest_prices)
         logger.info("Found %d alerts to send", len(all_actions))
@@ -311,31 +310,17 @@ def handler(event, context):
             logger.info("No alert conditions met")
             return {"statusCode": 200, "message": "No alerts triggered"}
 
-        try:
-            response = ses_client.send_raw_email(
-                Source=sender_email,
-                Destinations=[info['email']],
-                RawMessage={'Data': msg.as_string()}
-            )
-            print(f"Email sent to {info['email']}: {response['MessageId']}")
-            update_alerted_at(info)
-        except Exception as e:
-            print(f"Failed to send email to {info['email']}: {str(e)}")
-            # Continue processing remaining alerts even if this one fails
-            continue
         all_customer_info = get_all_required_customer_info(
             all_actions, latest_prices)
 
         if not all_customer_info:
-            logger.warning("No customer info could be retrieved for any alerts")
+            logger.warning(
+                "No customer info could be retrieved for any alerts")
             return {"statusCode": 200, "message": "No valid customer info for alerts"}
 
         generated_reports = get_generated_report_list(all_customer_info)
 
         send_emails(generated_reports, all_customer_info)
-def handler(event, context):
-    user_commodities = get_user_commodities()
-    latest_prices = get_latest_prices(event)
 
         logger.info("Successfully processed %d alerts", len(all_customer_info))
         return {"statusCode": 200, "message": f"Processed {len(all_customer_info)} alerts"}
@@ -346,11 +331,6 @@ def handler(event, context):
     except Exception as e:
         logger.error("Unexpected error in alert processing: %s", e)
         return {"statusCode": 500, "error": "Internal error occurred"}
-    send_emails(generated_reports, all_customer_info)
-    return {
-        "statusCode": 200,
-        "message": "Alerts processed successfully",
-    }
 
 
 if __name__ == "__main__":
