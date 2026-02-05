@@ -156,6 +156,36 @@ def delete_user_commodities(_conn: connection, user_id: int, comm_ids: list):
     _conn.commit()
 
 
+def update_user_commodities(_conn: connection, update_data: list[dict]):
+    """Update user commodity prices using separate buy and sell queries."""
+    
+    buy_updates = [item for item in update_data if "buy_price" in item]
+    sell_updates = [item for item in update_data if "sell_price" in item]
+    
+    with _conn.cursor() as cur:
+        if buy_updates:
+            query = sql.SQL(load_query("update_buy_prices.sql"))
+            buy_data = [
+                (item["buy_price"] if item["buy_price"] != 0 else None,
+                 item["user_id"],
+                 item["commodity_id"])
+                for item in buy_updates
+            ]
+            cur.executemany(query, buy_data)
+        
+        if sell_updates:
+            query = sql.SQL(load_query("update_sell_prices.sql"))
+            sell_data = [
+                (item["sell_price"] if item["sell_price"] != 0 else None,
+                 item["user_id"],
+                 item["commodity_id"])
+                for item in sell_updates
+            ]
+            cur.executemany(query, sell_data)
+    
+    _conn.commit()
+
+
 if __name__ == "__main__":
 
     load_dotenv()
