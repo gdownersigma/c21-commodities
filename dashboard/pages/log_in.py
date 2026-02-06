@@ -4,14 +4,15 @@
 
 from os import environ as ENV
 import streamlit as st
-from bcrypt import hashpw, gensalt
 
 from menu import menu
 from query_data import get_connection
 from dashboard_items import (build_form,
                              page_redirect)
-from helper_functions import fill_user_commodities
-from query_data import (get_user_by_email_password)
+from helper_functions import (fill_user_commodities,
+                              decrypt_and_verify)
+from query_data import (get_password_by_email,
+                        get_user_by_email)
 
 st.set_page_config(
     layout="centered"
@@ -21,15 +22,18 @@ st.set_page_config(
 def handle_login(conn, field_input):
     """Handle login logic."""
 
-    field_input["hashed_password"] = hashpw(
-        field_input["password"].encode('utf-8'), gensalt())
+    encrypted_password = get_password_by_email(
+        conn,
+        field_input["email"])
 
-    user = get_user_by_email_password(
-        conn, field_input["email"], field_input["password"])
+    print(type(encrypted_password))
 
-    if not user:
-        st.error("Invalid email or password. Please try again.")
-    else:
+    if encrypted_password and decrypt_and_verify(ENV, field_input["password"], encrypted_password):
+        print("Password verified successfully.")
+        user = get_user_by_email(
+            conn,
+            field_input["email"])
+
         st.success(f"Welcome back, {user['user_name']}!")
 
         fill_user_commodities(conn, user["user_id"])
@@ -40,6 +44,8 @@ def handle_login(conn, field_input):
         st.session_state.selected_commodities = {}
 
         st.switch_page("dashboard.py")
+    else:
+        st.error("Invalid email or password. Please try again.")
 
 
 def handle_cancel():
