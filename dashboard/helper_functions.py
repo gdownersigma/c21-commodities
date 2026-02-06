@@ -2,7 +2,13 @@
 
 # pylint: disable=no-member
 
+from os import _Environ
+
 import streamlit as st
+from bcrypt import hashpw, gensalt, checkpw
+from cryptography.fernet import Fernet
+
+from query_data import get_commodities_with_user_subscriptions
 
 
 def add_commodity():
@@ -43,3 +49,36 @@ def authenticate_user_input(user: dict) -> bool:
         if not authenticate_field(value):
             return False
     return True
+
+
+def fill_user_commodities(conn, user_id):
+    """Fill session state with user's subscribed commodities."""
+
+    comm_data = get_commodities_with_user_subscriptions(
+        conn, user_id)
+
+    st.session_state.user_commodities = comm_data
+
+    st.session_state.subscribed_commodities = [
+        comm_id for comm_id, data in comm_data.items() if data["track"]]
+
+
+def hash_and_encrypt(config: _Environ, var: str) -> bytes:
+    """Hash and encrypt a variable."""
+
+    hashed_var = hashpw(var.encode('utf-8'), gensalt())
+    encryption_key = config.get("ENCRYPTION_KEY")
+    cipher_suite = Fernet(encryption_key)
+    encrypted_var = cipher_suite.encrypt(hashed_var)
+
+    return encrypted_var
+
+
+def decrypt_and_verify(config: _Environ, var: str, encrypted_var: bytes) -> bool:
+    """Decrypt and verify a variable."""
+
+    encryption_key = config.get("ENCRYPTION_KEY")
+    cipher_suite = Fernet(encryption_key)
+    decrypted_var = cipher_suite.decrypt(encrypted_var)
+
+    return checkpw(var.encode('utf-8'), decrypted_var)
