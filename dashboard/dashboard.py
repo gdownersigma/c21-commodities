@@ -57,19 +57,7 @@ def build_sidebar(df: pd.DataFrame):
 
     st.sidebar.divider()
 
-    st.sidebar.header("Filters")
-
-    col1, col2 = st.sidebar.columns(2)
-    with col1:
-        start_date = st.date_input("Start Date",
-                                   key="start_date_input")
-    with col2:
-        end_date = st.date_input("End Date",
-                                 key="end_date_input")
-
     if st.session_state.user:
-        st.sidebar.divider()
-
         st.sidebar.header("Select Commodities")
 
         commodity_options = df[["commodity_id",
@@ -95,8 +83,6 @@ def build_sidebar(df: pd.DataFrame):
                       disabled=(st.session_state.num_commodities <= 1),
                       use_container_width=True,
                       key="remove_commodity_btn")
-
-    return start_date, end_date
 
 
 def display_key_metrics(df: pd.DataFrame):
@@ -151,7 +137,7 @@ if __name__ == "__main__":
 
     st.divider()
 
-    start_date, end_date = build_sidebar(df)
+    build_sidebar(df)
 
     if st.session_state.user:
         display_key_metrics(df)
