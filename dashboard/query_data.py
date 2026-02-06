@@ -70,13 +70,13 @@ def get_user_count_by_email(_conn: connection, email: str) -> dict:
 
 
 @st.cache_data(ttl=3600)
-def get_user_by_email_password(_conn: connection, email: str, hashed_password: bytes) -> dict:
-    """Return user data from the database based on email and hashed password."""
+def get_user_by_email(_conn: connection, email: str) -> dict:
+    """Return user data from the database based on email."""
 
-    query = sql.SQL(load_query("get_user_by_email_password.sql"))
+    query = sql.SQL(load_query("get_user_by_email.sql"))
 
     with _conn.cursor() as cur:
-        cur.execute(query, (email, hashed_password))
+        cur.execute(query, (email,))
 
         data = cur.fetchone()
 
@@ -84,6 +84,23 @@ def get_user_by_email_password(_conn: connection, email: str, hashed_password: b
             return dict(data)
         else:
             return {}
+
+
+def get_password_by_email(_conn: connection, email: str):
+    """Return user password from the database based on email."""
+
+    query = sql.SQL(load_query("get_password_by_email.sql"))
+
+    with _conn.cursor() as cur:
+        cur.execute(query, (email,))
+
+        data = cur.fetchone()
+
+    if data:
+        password = data["password"]
+        
+        return bytes(password) if isinstance(password, memoryview) else password
+    return None
 
 
 @st.cache_data(ttl=3600)
@@ -206,7 +223,8 @@ if __name__ == "__main__":
 
     conn = get_connection(ENV)
 
-    data = get_commodities_with_user_subscriptions(conn, 16)
+    # data = get_commodities_with_user_subscriptions(conn, 16)
+    data = get_password_by_email(conn, "test4@example.com")
     print(data)
 
     conn.close()
