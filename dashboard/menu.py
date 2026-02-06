@@ -6,6 +6,7 @@ import streamlit as st
 def authenticated_menu():
     """Show a navigation menu for authenticated users."""
 
+    st.sidebar.image("images/pivot_point.png", use_container_width=True)
     st.sidebar.page_link("dashboard.py", label="Home")
     st.sidebar.page_link("pages/edit_subscriptions.py",
                          label="Account Settings")
@@ -14,6 +15,7 @@ def authenticated_menu():
 def unauthenticated_menu():
     """Show a navigation menu for unauthenticated users."""
 
+    st.sidebar.image("images/pivot_point.png", use_container_width=True)
     st.sidebar.page_link("dashboard.py", label="Home")
     st.sidebar.page_link("pages/log_in.py", label="Log in")
 

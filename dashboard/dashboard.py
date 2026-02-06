@@ -42,8 +42,6 @@ if "user_commodities" not in st.session_state:
 def build_sidebar(df: pd.DataFrame):
     """Build the sidebar with filters."""
 
-    st.sidebar.image("images/pivot_point.png", use_container_width=True)
-
     if st.session_state.user:
         if st.sidebar.button("Log out",
                              key="logout_btn"):
