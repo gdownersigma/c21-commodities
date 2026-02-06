@@ -53,6 +53,7 @@ class TestFormatName:
         ("", ""),
     ])
     def test_format_name(self, input_name, expected):
+        """Should convert underscores to spaces and title case the name."""
         assert format_name(input_name) == expected
 
 
@@ -65,6 +66,7 @@ class TestCalculateProfitLoss:
         (100.0, 100.0, 0.0, 0.0),
     ])
     def test_profit_loss_calculation(self, close, buy, expected_pl, expected_pct):
+        """Should calculate profit/loss amount and percentage correctly."""
         row = pd.Series({"close_price": close, "buy_price": buy})
         result = calculate_profit_loss(row)
         assert result["profit_loss"] == expected_pl
@@ -72,6 +74,7 @@ class TestCalculateProfitLoss:
 
     @pytest.mark.parametrize("buy_price", [None, 0])
     def test_invalid_buy_price_returns_none(self, buy_price):
+        """Should return None for profit/loss when buy price is invalid."""
         row = pd.Series({"close_price": 100.0, "buy_price": buy_price})
         result = calculate_profit_loss(row)
         assert result["profit_loss"] is None
@@ -82,6 +85,7 @@ class TestGetUserMarketData:
     """Tests for the get_user_market_data function."""
 
     def test_filters_by_user_commodities(self):
+        """Should filter market data to only include user's commodities."""
         user_commodities_df = pd.DataFrame({
             "user_id": [1, 1, 2],
             "symbol": ["GCUSD", "SIUSD", "GCUSD"],
@@ -104,6 +108,7 @@ class TestGetUserMarketData:
         assert set(result["symbol"].tolist()) == {"GCUSD", "SIUSD"}
 
     def test_calculates_open_and_close_prices(self, sample_market_df):
+        """Should calculate open and close prices from market data."""
         user_commodities_df = pd.DataFrame({
             "user_id": [1],
             "symbol": ["GCUSD"],
@@ -117,6 +122,7 @@ class TestGetUserMarketData:
         assert result.iloc[0]["close_price"] == 1820.0
 
     def test_empty_result_for_user_with_no_commodities(self):
+        """Should return empty result when user has no commodities."""
         user_commodities_df = pd.DataFrame({
             "user_id": [2],
             "symbol": ["GCUSD"],
@@ -138,6 +144,7 @@ class TestGeneratePriceChart:
     """Tests for the generate_price_chart function."""
 
     def test_returns_none_with_insufficient_data(self):
+        """Should return None when there is insufficient data for chart."""
         market_df = pd.DataFrame({
             "symbol": ["GCUSD"],
             "price": [1800.0],
@@ -146,6 +153,7 @@ class TestGeneratePriceChart:
         assert generate_price_chart("GCUSD", "Gold", market_df) is None
 
     def test_returns_tuple_with_sufficient_data(self, sample_market_df):
+        """Should return chart ID and image bytes with sufficient data."""
         result = generate_price_chart("GCUSD", "Gold", sample_market_df)
 
         assert result is not None
@@ -155,6 +163,7 @@ class TestGeneratePriceChart:
         assert len(img_bytes) > 0
 
     def test_handles_symbol_with_slash(self):
+        """Should replace slashes with underscores in chart ID."""
         market_df = pd.DataFrame({
             "symbol": ["GC/USD", "GC/USD"],
             "price": [1800.0, 1850.0],
@@ -169,6 +178,7 @@ class TestGenerateUserHtmlReport:
     """Tests for the generate_user_html_report function."""
 
     def test_generates_html_with_user_name(self, sample_user_data, sample_market_df, report_date):
+        """Should generate HTML report with formatted user name and commodity data."""
         result = generate_user_html_report(
             "alice_jones", sample_user_data, report_date, sample_market_df)
 
@@ -179,12 +189,14 @@ class TestGenerateUserHtmlReport:
         assert "GCUSD" in result["html"]
 
     def test_report_contains_profit_loss(self, sample_user_data, sample_market_df, report_date):
+        """Should include profit/loss information in the report."""
         result = generate_user_html_report(
             "alice_jones", sample_user_data, report_date, sample_market_df)
 
         assert "+$70.00" in result["html"]
 
     def test_report_shows_commodity_count(self, sample_market_df, report_date):
+        """Should display the correct count of commodities in the report."""
         user_data = pd.DataFrame({
             "symbol": ["GCUSD", "SIUSD"],
             "commodity_name": ["Gold", "Silver"],
