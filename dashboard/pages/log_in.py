@@ -26,10 +26,7 @@ def handle_login(conn, field_input):
         conn,
         field_input["email"])
 
-    print(type(encrypted_password))
-
     if encrypted_password and decrypt_and_verify(ENV, field_input["password"], encrypted_password):
-        print("Password verified successfully.")
         user = get_user_by_email(
             conn,
             field_input["email"])

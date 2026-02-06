@@ -76,11 +76,9 @@ def hash_and_encrypt(config: _Environ, var: str) -> bytes:
 
 def decrypt_and_verify(config: _Environ, var: str, encrypted_var: bytes) -> bool:
     """Decrypt and verify a variable."""
-    print("input password:", var)
-    print("encrypted password:", encrypted_var)
+
     encryption_key = config.get("ENCRYPTION_KEY")
     cipher_suite = Fernet(encryption_key)
     decrypted_var = cipher_suite.decrypt(encrypted_var)
-    print("decrypted password:", decrypted_var)
 
     return checkpw(var.encode('utf-8'), decrypted_var)
