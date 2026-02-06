@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from dashboard_items import (welcome_message)
+from dashboard_items import welcome_message
 
 
 def authenticated_menu():
@@ -23,6 +23,8 @@ def unauthenticated_menu():
 def menu():
     """Determine if a user is logged in or not and show the correct navigation menu."""
 
+    st.sidebar.image("images/pivot_point.png", use_container_width=True)
+    
     welcome_message()
 
     if "user" not in st.session_state or not st.session_state.user:
