@@ -107,8 +107,8 @@ def build_single_commodity_graph(df: pd.DataFrame, market_df: pd.DataFrame, grap
         # Add padding to high/low for better graph visibility
         price_range = period_high - period_low
         padding = price_range * 0.05 if price_range > 0 else current_price * 0.01
-        default_y_max = period_high + padding
-        default_y_min = max(0, period_low - padding)
+        default_y_max = float(period_high + padding)
+        default_y_min = float(max(0, period_low - padding))
 
         with slider_col:
             # Custom CSS for orange styling
@@ -299,8 +299,8 @@ def build_combined_graph(df: pd.DataFrame, market_df: pd.DataFrame):
         # Add padding to high/low for better graph visibility
         price_range = period_high - period_low
         padding = price_range * 0.05 if price_range > 0 else avg_price * 0.01
-        default_y_max = period_high + padding
-        default_y_min = max(0, period_low - padding)
+        default_y_max = float(period_high + padding)
+        default_y_min = float(max(0, period_low - padding))
 
         with slider_col:
             # Custom CSS for orange styling
