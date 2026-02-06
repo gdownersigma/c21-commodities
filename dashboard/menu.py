@@ -2,6 +2,8 @@
 
 import streamlit as st
 
+from dashboard_items import (welcome_message)
+
 
 def authenticated_menu():
     """Show a navigation menu for authenticated users."""
@@ -20,6 +22,8 @@ def unauthenticated_menu():
 
 def menu():
     """Determine if a user is logged in or not and show the correct navigation menu."""
+
+    welcome_message()
 
     if "user" not in st.session_state or not st.session_state.user:
         unauthenticated_menu()
