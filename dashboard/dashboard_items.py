@@ -8,9 +8,14 @@ from datetime import datetime, timedelta
 from psycopg2.extensions import connection
 
 from helper_functions import (clean_input,
-                              authenticate_user_input)
+                              authenticate_user_input,
+                              invoke_historical_lambda)
 
-from query_data import (get_market_data_by_ids)
+from query_data import (get_market_data_by_ids,
+                        get_commodity_symbol_by_id)
+
+# Default commodities that have continuous data (don't need historical fetch)
+DEFAULT_COMMODITY_IDS = {10, 18, 40}
 
 
 def add_commodity_selector(commodity_options: list, i: int):
@@ -34,28 +39,76 @@ def build_single_commodity_graph(df: pd.DataFrame, market_df: pd.DataFrame, grap
         with graph_col:
             st.warning("No market data available.")
     else:
-        # Calculate time range for initial zoom (last 3 hours)
-        max_time = market_df['recorded_at'].max()
-        min_time = max_time - timedelta(hours=3)
+        # Get unique key from commodity_id and graph_index
+        comm_id = market_df['commodity_id'].iloc[0]
+        unique_key = f"{comm_id}_{graph_index}"
+
+        # Get absolute time bounds from data
+        data_max_time = market_df['recorded_at'].max()
+        data_min_time = market_df['recorded_at'].min()
+
+        # Time range buttons
+        with graph_col:
+            time_col1, time_col2, time_col3, time_col4 = st.columns(4)
+            with time_col1:
+                if st.button("3H", key=f"time_3h_{unique_key}", use_container_width=True):
+                    st.session_state[f"time_range_{unique_key}"] = 3
+            with time_col2:
+                if st.button("1D", key=f"time_1d_{unique_key}", use_container_width=True):
+                    st.session_state[f"time_range_{unique_key}"] = 24
+            with time_col3:
+                if st.button("7D", key=f"time_7d_{unique_key}", use_container_width=True):
+                    st.session_state[f"time_range_{unique_key}"] = 168
+            with time_col4:
+                if st.button("30D", key=f"time_30d_{unique_key}", use_container_width=True):
+                    st.session_state[f"time_range_{unique_key}"] = 720
+
+        # Get selected time range (default to 3 hours)
+        time_range_hours = st.session_state.get(f"time_range_{unique_key}", 3)
+        max_time = data_max_time
+        requested_min_time = data_max_time - timedelta(hours=time_range_hours)
+        min_time = max(data_min_time, requested_min_time)
+
+        # Fetch historical data if needed (only for non-default commodities)
+        if requested_min_time < data_min_time and int(comm_id) not in DEFAULT_COMMODITY_IDS:
+            if f"fetching_{comm_id}" not in st.session_state:
+                from query_data import get_connection
+                from os import environ as ENV
+                conn = get_connection(ENV)
+                symbol = get_commodity_symbol_by_id(conn, int(comm_id))
+                conn.close()
+                if symbol:
+                    invoke_historical_lambda(symbol)
+                    st.session_state[f"fetching_{comm_id}"] = True
+            st.toast("Bear with us while we fetch the data...", icon="⏳")
 
         # Get price range for slider
         price_min = float(market_df['price'].min())
         price_max = float(market_df['price'].max())
         price_padding = (price_max - price_min) * 0.1  # 10% padding
 
-        # Get day high/low for default slider values
+        # Filter data to selected time range for high/low calculation
+        filtered_df = market_df[market_df['recorded_at'] >= min_time]
+        if not filtered_df.empty:
+            period_high = float(filtered_df['price'].max())
+            period_low = float(filtered_df['price'].min())
+        else:
+            period_high = float(market_df['price'].max())
+            period_low = float(market_df['price'].min())
+
+        # Get current price for step calculation
         sorted_df = market_df.sort_values('recorded_at', ascending=True)
         latest = sorted_df.iloc[-1]
-        day_high = float(latest['day_high'])
-        day_low = float(latest['day_low'])
         current_price = float(latest['price'])
 
         # Step size is 2% of current price
         price_step = round(current_price * 0.02, 2)
 
-        # Get unique key from commodity_id and graph_index
-        comm_id = market_df['commodity_id'].iloc[0]
-        unique_key = f"{comm_id}_{graph_index}"
+        # Add padding to high/low for better graph visibility
+        price_range = period_high - period_low
+        padding = price_range * 0.05 if price_range > 0 else current_price * 0.01
+        default_y_max = period_high + padding
+        default_y_min = max(0, period_low - padding)
 
         with slider_col:
             # Custom CSS for orange styling
@@ -74,21 +127,22 @@ def build_single_commodity_graph(df: pd.DataFrame, market_df: pd.DataFrame, grap
             st.markdown("**Price**")
 
             # Use number inputs for max/min with direct value entry
+            # Include time_range in key so values reset when period changes
             y_max_val = st.number_input(
                 "Max $",
                 min_value=0.0,
-                value=day_high,
+                value=default_y_max,
                 step=price_step,
                 format="%.2f",
-                key=f"price_max_{unique_key}"
+                key=f"price_max_{unique_key}_{time_range_hours}"
             )
             y_min_val = st.number_input(
                 "Min $",
                 min_value=0.0,
-                value=day_low,
+                value=default_y_min,
                 step=price_step,
                 format="%.2f",
-                key=f"price_min_{unique_key}"
+                key=f"price_min_{unique_key}_{time_range_hours}"
             )
 
             # Analysis Mode button
@@ -125,6 +179,10 @@ def build_single_commodity_graph(df: pd.DataFrame, market_df: pd.DataFrame, grap
 
             st.altair_chart(chart, use_container_width=True)
 
+        # Determine period label for high/low display
+        period_labels = {3: "3H", 24: "1D", 168: "7D", 720: "30D"}
+        period_label = period_labels.get(time_range_hours, "PERIOD")
+
     with metrics_col:
         if not market_df.empty:
             # Sort by date and get the most recent record
@@ -135,27 +193,27 @@ def build_single_commodity_graph(df: pd.DataFrame, market_df: pd.DataFrame, grap
 
             # Fancy high/low display
             st.markdown("---")
-            st.markdown("""
+            st.markdown(f"""
                 <div style="background-color: #ff801d40; 
                             border-radius: 10px; padding: 15px; text-align: center;
                             border: 3px solid #ff801d;">
-                    <p style="color: #64748b; margin: 0; font-size: 12px;">DAY HIGH</p>
+                    <p style="color: #64748b; margin: 0; font-size: 12px;">{period_label} HIGH</p>
                     <p style="color: #22c55e; font-size: 24px; font-weight: 700; margin: 5px 0;">
-                        ${:.2f}
+                        ${period_high:.2f}
                     </p>
                 </div>
-            """.format(latest['day_high']), unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
-            st.markdown("""
+            st.markdown(f"""
                 <div style="background-color: #ff801d40; 
                             border-radius: 10px; padding: 15px; text-align: center; margin-top: 10px;
                             border: 3px solid #ff801d;">
-                    <p style="color: #64748b; margin: 0; font-size: 12px;">DAY LOW</p>
+                    <p style="color: #64748b; margin: 0; font-size: 12px;">{period_label} LOW</p>
                     <p style="color: #ef4444; font-size: 24px; font-weight: 700; margin: 5px 0;">
-                        ${:.2f}
+                        ${period_low:.2f}
                     </p>
                 </div>
-            """.format(latest['day_low']), unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
     st.divider()
 
@@ -175,23 +233,74 @@ def build_combined_graph(df: pd.DataFrame, market_df: pd.DataFrame):
             how='left'
         )
 
-        # Calculate time range for initial zoom (last 3 hours)
-        max_time = chart_df['recorded_at'].max()
-        min_time = max_time - timedelta(hours=3)
+        # Get absolute time bounds from data
+        data_max_time = chart_df['recorded_at'].max()
+        data_min_time = chart_df['recorded_at'].min()
+
+        # Time range buttons
+        with graph_col:
+            time_col1, time_col2, time_col3, time_col4 = st.columns(4)
+            with time_col1:
+                if st.button("3H", key="time_3h_combined", use_container_width=True):
+                    st.session_state["time_range_combined"] = 3
+            with time_col2:
+                if st.button("1D", key="time_1d_combined", use_container_width=True):
+                    st.session_state["time_range_combined"] = 24
+            with time_col3:
+                if st.button("7D", key="time_7d_combined", use_container_width=True):
+                    st.session_state["time_range_combined"] = 168
+            with time_col4:
+                if st.button("30D", key="time_30d_combined", use_container_width=True):
+                    st.session_state["time_range_combined"] = 720
+
+        # Get selected time range (default to 3 hours)
+        time_range_hours = st.session_state.get("time_range_combined", 3)
+        max_time = data_max_time
+        requested_min_time = data_max_time - timedelta(hours=time_range_hours)
+        min_time = max(data_min_time, requested_min_time)
+
+        # Fetch historical data if needed (only for non-default commodities)
+        if requested_min_time < data_min_time:
+            from query_data import get_connection
+            from os import environ as ENV
+            needs_fetch = False
+            for comm_id in chart_df['commodity_id'].unique():
+                if int(comm_id) not in DEFAULT_COMMODITY_IDS:
+                    if f"fetching_{comm_id}" not in st.session_state:
+                        conn = get_connection(ENV)
+                        symbol = get_commodity_symbol_by_id(conn, int(comm_id))
+                        conn.close()
+                        if symbol:
+                            invoke_historical_lambda(symbol)
+                            st.session_state[f"fetching_{comm_id}"] = True
+                            needs_fetch = True
+            if needs_fetch:
+                st.toast("Bear with us while we fetch the data...", icon="⏳")
 
         # Get price range for slider (across all commodities)
         price_min = float(chart_df['price'].min())
         price_max = float(chart_df['price'].max())
         price_padding = (price_max - price_min) * 0.1  # 10% padding
 
-        # Get day high/low across all commodities
-        day_high = float(chart_df['day_high'].max())
-        day_low = float(chart_df['day_low'].min())
+        # Filter data to selected time range for high/low calculation
+        filtered_df = chart_df[chart_df['recorded_at'] >= min_time]
+        if not filtered_df.empty:
+            period_high = float(filtered_df['price'].max())
+            period_low = float(filtered_df['price'].min())
+        else:
+            period_high = float(chart_df['price'].max())
+            period_low = float(chart_df['price'].min())
 
         # Step size is 2% of average current price across commodities
         avg_price = float(chart_df.groupby(
             'commodity_id')['price'].last().mean())
         price_step = round(avg_price * 0.02, 2)
+
+        # Add padding to high/low for better graph visibility
+        price_range = period_high - period_low
+        padding = price_range * 0.05 if price_range > 0 else avg_price * 0.01
+        default_y_max = period_high + padding
+        default_y_min = max(0, period_low - padding)
 
         with slider_col:
             # Custom CSS for orange styling
@@ -210,21 +319,22 @@ def build_combined_graph(df: pd.DataFrame, market_df: pd.DataFrame):
             st.markdown("**Price**")
 
             # Use number inputs for max/min with direct value entry
+            # Include time_range in key so values reset when period changes
             y_max_val = st.number_input(
                 "Max $",
                 min_value=0.0,
-                value=day_high,
+                value=default_y_max,
                 step=price_step,
                 format="%.2f",
-                key="combined_price_max"
+                key=f"combined_price_max_{time_range_hours}"
             )
             y_min_val = st.number_input(
                 "Min $",
                 min_value=0.0,
-                value=day_low,
+                value=default_y_min,
                 step=price_step,
                 format="%.2f",
-                key="combined_price_min"
+                key=f"combined_price_min_{time_range_hours}"
             )
 
             # Analysis Mode button

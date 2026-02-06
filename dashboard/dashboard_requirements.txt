@@ -7,3 +7,4 @@ altair
 psycopg2
 bcrypt
 cryptography
+boto3

@@ -2,8 +2,10 @@
 
 # pylint: disable=no-member
 
-from os import _Environ
+import json
+from os import _Environ, environ as ENV
 
+import boto3
 import streamlit as st
 from bcrypt import hashpw, gensalt, checkpw
 from cryptography.fernet import Fernet
@@ -82,3 +84,22 @@ def decrypt_and_verify(config: _Environ, var: str, encrypted_var: bytes) -> bool
     decrypted_var = cipher_suite.decrypt(encrypted_var)
 
     return checkpw(var.encode('utf-8'), decrypted_var)
+
+
+def invoke_historical_lambda(symbol: str) -> bool:
+    """Invoke the historical pipeline Lambda to fetch 30 days of data for a commodity."""
+
+    client = boto3.client(
+        "lambda",
+        region_name=ENV.get("AWS_REGION")
+    )
+
+    payload = {"symbol": symbol}
+
+    response = client.invoke(
+        FunctionName=ENV.get("HISTORICAL_LAMBDA_NAME"),
+        InvocationType="Event",
+        Payload=json.dumps(payload)
+    )
+
+    return response["StatusCode"] == 202
