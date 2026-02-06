@@ -2,9 +2,13 @@
 
 import streamlit as st
 
+from dashboard_items import welcome_message
+
 
 def authenticated_menu():
     """Show a navigation menu for authenticated users."""
+
+    welcome_message()
 
     st.sidebar.page_link("dashboard.py", label="Home")
     st.sidebar.page_link("pages/edit_subscriptions.py",

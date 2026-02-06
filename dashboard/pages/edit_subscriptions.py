@@ -9,7 +9,8 @@ import pandas as pd
 from menu import menu_with_redirect
 from dashboard_items import (display_markdown_title,
                              build_single_commodity_edit,
-                             page_redirect)
+                             page_redirect,
+                             logout_button)
 from query_data import (get_connection,
                         create_commodity_connections,
                         delete_user_commodities,
@@ -119,13 +120,14 @@ def handle_submit(new_comm):
         st.error("No changes made.")
     else:
         conn = get_connection(ENV)
-        
+
         if create_subscriptions:
             create_commodity_connections(conn, create_subscriptions)
-        
+
         if delete_subscriptions:
-            delete_user_commodities(conn, st.session_state.user["user_id"], delete_subscriptions)
-        
+            delete_user_commodities(
+                conn, st.session_state.user["user_id"], delete_subscriptions)
+
         if update_subscriptions:
             update_user_commodities(conn, update_subscriptions)
 
@@ -138,13 +140,14 @@ def handle_submit(new_comm):
 
         st.session_state.subscribed_commodities = [
             comm_id for comm_id, data in new_comm.items() if data["track"]]
-        
+
         st.switch_page("dashboard.py")
 
 
 if __name__ == "__main__":
 
     menu_with_redirect()
+    logout_button()
 
     st.title(body="Pivot Point",
              text_alignment="center")
