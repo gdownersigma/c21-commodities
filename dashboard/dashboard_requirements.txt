@@ -6,3 +6,4 @@ pandas
 altair
 psycopg2
 bcrypt
+cryptography
