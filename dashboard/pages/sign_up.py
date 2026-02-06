@@ -4,13 +4,13 @@
 
 from os import environ as ENV
 import streamlit as st
-from bcrypt import hashpw, gensalt
 
 from menu import menu
 from query_data import get_connection
 from dashboard_items import (build_form,
                              page_redirect)
-from helper_functions import fill_user_commodities
+from helper_functions import (fill_user_commodities,
+                              hash_and_encrypt)
 from query_data import (get_user_count_by_email,
                         create_user,
                         create_commodity_connections)
@@ -28,9 +28,9 @@ def handle_signup(conn, field_input):
     if user_count != 0:
         st.error("An account with this email already exists. Please log in.")
     else:
-        field_input["hashed_password"] = hashpw(
-            field_input["password"].encode('utf-8'), gensalt())
-        field_input["hashed_password"] = field_input["password"]
+        field_input["hashed_password"] = hash_and_encrypt(
+            ENV,
+            field_input["password"])
 
         user_id = create_user(conn, field_input)
 
