@@ -15,7 +15,11 @@ from query_data import (get_connection,
                         create_commodity_connections,
                         delete_user_commodities,
                         update_user_commodities,
-                        get_commodities_with_user_subscriptions)
+                        get_commodities_with_user_subscriptions,
+                        get_commodity_symbol_by_id)
+from helper_functions import invoke_historical_lambda
+
+DEFAULT_COMMODITY_IDS = {10, 18, 40}
 
 st.set_page_config(
     layout="wide"
@@ -123,6 +127,14 @@ def handle_submit(new_comm):
 
         if create_subscriptions:
             create_commodity_connections(conn, create_subscriptions)
+
+            for sub in create_subscriptions:
+                comm_id = sub["commodity_id"]
+                if comm_id not in DEFAULT_COMMODITY_IDS:
+                    symbol = get_commodity_symbol_by_id(conn, comm_id)
+                    if symbol:
+                        invoke_historical_lambda(symbol)
+                        st.toast(f"Fetching historical data for {symbol}...")
 
         if delete_subscriptions:
             delete_user_commodities(
