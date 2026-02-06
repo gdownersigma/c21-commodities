@@ -1,5 +1,6 @@
 """File to hold functions to create items in the dashboard."""
 
+import html
 import streamlit as st
 import pandas as pd
 import altair as alt
@@ -432,9 +433,10 @@ def logout_button():
 def welcome_message():
     """Display welcome message on dashboard."""
 
+    safe_name = html.escape(st.session_state.user['user_name'])
     st.sidebar.markdown(f"""
             <div style='text-align: left; font-size: 20px; font-weight: 500;'>
-                Welcome back, <span style="color: #ff801d; font-weight: 700;">{st.session_state.user['user_name']}</span>!
+                Welcome back, <span style="color: #ff801d; font-weight: 700;">{safe_name}</span>!
             </div>
         """, unsafe_allow_html=True)
 
