@@ -11,8 +11,7 @@ from helper_functions import (add_commodity,
 from dashboard_items import (add_commodity_selector,
                              build_single_commodity_graph,
                              build_combined_graph,
-                             logout_button,
-                             welcome_message)
+                             logout_button)
 from query_data import (get_connection,
                         get_commodity_data_by_ids,
                         get_market_data_by_ids)
