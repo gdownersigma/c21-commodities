@@ -409,3 +409,33 @@ def build_single_commodity_edit(comm: dict) -> dict:
                 disabled=not commodity_data["sell"])
 
     return commodity_data
+
+
+def logout_button():
+    """Build log out button in sidebar."""
+
+    if st.sidebar.button("Log out",
+                         key="logout_btn"):
+        st.session_state.user = {}
+        st.session_state.subscribed_commodities = [10, 18, 40]
+        st.session_state.selected_commodities = {
+            "commodity_0": [10, "Brent Crude Oil"],
+            "commodity_1": [18, "Gold Futures"],
+            "commodity_2": [40, "Silver Futures"]
+        }
+        st.session_state.num_commodities = 3
+        st.rerun()
+
+    st.sidebar.divider()
+
+
+def welcome_message():
+    """Display welcome message on dashboard."""
+
+    st.sidebar.markdown(f"""
+            <div style='text-align: left; font-size: 20px; font-weight: 500;'>
+                Welcome back, <span style="color: #ff801d; font-weight: 700;">{st.session_state.user['user_name']}</span>!
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.sidebar.divider()

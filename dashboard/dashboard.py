@@ -10,7 +10,9 @@ from helper_functions import (add_commodity,
                               remove_commodity)
 from dashboard_items import (add_commodity_selector,
                              build_single_commodity_graph,
-                             build_combined_graph)
+                             build_combined_graph,
+                             logout_button,
+                             welcome_message)
 from query_data import (get_connection,
                         get_commodity_data_by_ids,
                         get_market_data_by_ids)
@@ -43,19 +45,7 @@ def build_sidebar(df: pd.DataFrame):
     """Build the sidebar with filters."""
 
     if st.session_state.user:
-        if st.sidebar.button("Log out",
-                             key="logout_btn"):
-            st.session_state.user = {}
-            st.session_state.subscribed_commodities = [10, 18, 40]
-            st.session_state.selected_commodities = {
-                "commodity_0": [10, "Brent Crude Oil"],
-                "commodity_1": [18, "Gold Futures"],
-                "commodity_2": [40, "Silver Futures"]
-            }
-            st.session_state.num_commodities = 3
-            st.rerun()
-
-    st.sidebar.divider()
+        logout_button()
 
     if st.session_state.user:
         st.sidebar.header("Select Commodities")
