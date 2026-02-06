@@ -74,18 +74,57 @@ def build_sidebar(df: pd.DataFrame):
                       key="remove_commodity_btn")
 
 
-def display_key_metrics(df: pd.DataFrame):
+def display_key_metrics(df: pd.DataFrame, conn):
     """Display key metrics in the dashboard."""
 
-    st.header("Key Metrics")
+    # Get market data to calculate average change
+    commodity_ids = df["commodity_id"].unique().tolist()
+    market_df = get_market_data_by_ids(conn, commodity_ids)
 
-    with st.container(horizontal=True):
-        st.metric(label="No. Subscribed Commodities",
-                        value=len(st.session_state.subscribed_commodities))
-        st.metric(label="Average Price Change (%)",
-                        value=1.5)
+    # Calculate average change percentage across subscribed commodities
+    if not market_df.empty:
+        # Get the latest record for each commodity
+        latest_per_commodity = market_df.sort_values(
+            'recorded_at').groupby('commodity_id').last()
+        avg_change = latest_per_commodity['change_percentage'].mean()
+    else:
+        avg_change = 0.0
 
-        st.metric("My metric", 42, 2)
+    # Determine color and icon based on positive/negative change
+    if avg_change >= 0:
+        change_color = "#22c55e"
+        arrow = "▲"
+    else:
+        change_color = "#ef4444"
+        arrow = "▼"
+
+    num_commodities = len(st.session_state.subscribed_commodities)
+
+    st.markdown(f"""
+        <div style="text-align: center; padding: 20px 0;">
+            <h2 style="margin-bottom: 30px; color: #1e293b;">Key Metrics</h2>
+            <div style="display: flex; justify-content: center; gap: 60px;">
+                <div style="background: linear-gradient(135deg, #ff801d15 0%, #ff801d30 100%);
+                            border: 2px solid #ff801d;
+                            border-radius: 15px;
+                            padding: 25px 40px;
+                            min-width: 200px;">
+                    <p style="color: #64748b; font-size: 14px; margin: 0 0 8px 0;">Subscribed Commodities</p>
+                    <p style="color: #ff801d; font-size: 42px; font-weight: 700; margin: 0;">{num_commodities}</p>
+                </div>
+                <div style="background: linear-gradient(135deg, {change_color}15 0%, {change_color}30 100%);
+                            border: 2px solid {change_color};
+                            border-radius: 15px;
+                            padding: 25px 40px;
+                            min-width: 200px;">
+                    <p style="color: #64748b; font-size: 14px; margin: 0 0 8px 0;">Average Price Change</p>
+                    <p style="color: {change_color}; font-size: 42px; font-weight: 700; margin: 0;">
+                        {arrow} {'+' if avg_change >= 0 else ''}{avg_change:.2f}%
+                    </p>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
 
 def display_combined_graph(df: pd.DataFrame, conn):
@@ -129,7 +168,7 @@ if __name__ == "__main__":
     build_sidebar(df)
 
     if st.session_state.user:
-        display_key_metrics(df)
+        display_key_metrics(df, conn)
 
         if st.session_state.num_commodities > 1:
             display_combined_graph(df, conn)
