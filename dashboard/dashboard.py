@@ -48,7 +48,7 @@ if "analysis_commodity_id" not in st.session_state:
 if "switch_to_analysis" not in st.session_state:
     st.session_state.switch_to_analysis = False
 
-if st.session_state.last_page != "dashboard":
+if st.session_state.user and st.session_state.last_page != "dashboard":
     st.session_state.selected_commodities = {}
     st.session_state.num_commodities = 1
     st.session_state.last_page = "dashboard"
@@ -78,13 +78,13 @@ def build_sidebar(df: pd.DataFrame):
                       disabled=(st.session_state.num_commodities >= min(
                           len(st.session_state.subscribed_commodities), 10)
                       ),
-                      use_container_width=True,
+                      width='stretch',
                       key="add_commodity_btn")
         with col2:
             st.button("➖ Remove",
                       on_click=remove_commodity,
                       disabled=(st.session_state.num_commodities <= 1),
-                      use_container_width=True,
+                      width='stretch',
                       key="remove_commodity_btn")
 
 

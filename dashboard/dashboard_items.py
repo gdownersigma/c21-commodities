@@ -53,16 +53,16 @@ def build_single_commodity_graph(df: pd.DataFrame, market_df: pd.DataFrame, grap
         with graph_col:
             time_col1, time_col2, time_col3, time_col4 = st.columns(4)
             with time_col1:
-                if st.button("3H", key=f"time_3h_{unique_key}", use_container_width=True):
+                if st.button("3H", key=f"time_3h_{unique_key}", width='stretch'):
                     st.session_state[f"time_range_{unique_key}"] = 3
             with time_col2:
-                if st.button("1D", key=f"time_1d_{unique_key}", use_container_width=True):
+                if st.button("1D", key=f"time_1d_{unique_key}", width='stretch'):
                     st.session_state[f"time_range_{unique_key}"] = 24
             with time_col3:
-                if st.button("7D", key=f"time_7d_{unique_key}", use_container_width=True):
+                if st.button("7D", key=f"time_7d_{unique_key}", width='stretch'):
                     st.session_state[f"time_range_{unique_key}"] = 168
             with time_col4:
-                if st.button("30D", key=f"time_30d_{unique_key}", use_container_width=True):
+                if st.button("30D", key=f"time_30d_{unique_key}", width='stretch'):
                     st.session_state[f"time_range_{unique_key}"] = 720
 
         # Get selected time range (default to 3 hours)
@@ -150,7 +150,7 @@ def build_single_commodity_graph(df: pd.DataFrame, market_df: pd.DataFrame, grap
             if st.session_state.user:
                 # Analysis Mode button
                 st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("📊 Analysis", key=f"analysis_{unique_key}", use_container_width=True):
+                if st.button("📊 Analysis", key=f"analysis_{unique_key}", width='stretch'):
                     st.session_state.analysis_commodity_id = int(comm_id)
                     st.switch_page("pages/analysis.py")
 
@@ -180,7 +180,7 @@ def build_single_commodity_graph(df: pd.DataFrame, market_df: pd.DataFrame, grap
                 height=350
             ).interactive(bind_y=False)
 
-            st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(chart, width='stretch')
 
         # Determine period label for high/low display
         period_labels = {3: "3H", 24: "1D", 168: "7D", 720: "30D"}
@@ -244,16 +244,16 @@ def build_combined_graph(df: pd.DataFrame, market_df: pd.DataFrame):
         with graph_col:
             time_col1, time_col2, time_col3, time_col4 = st.columns(4)
             with time_col1:
-                if st.button("3H", key="time_3h_combined", use_container_width=True):
+                if st.button("3H", key="time_3h_combined", width='stretch'):
                     st.session_state["time_range_combined"] = 3
             with time_col2:
-                if st.button("1D", key="time_1d_combined", use_container_width=True):
+                if st.button("1D", key="time_1d_combined", width='stretch'):
                     st.session_state["time_range_combined"] = 24
             with time_col3:
-                if st.button("7D", key="time_7d_combined", use_container_width=True):
+                if st.button("7D", key="time_7d_combined", width='stretch'):
                     st.session_state["time_range_combined"] = 168
             with time_col4:
-                if st.button("30D", key="time_30d_combined", use_container_width=True):
+                if st.button("30D", key="time_30d_combined", width='stretch'):
                     st.session_state["time_range_combined"] = 720
 
         # Get selected time range (default to 3 hours)
@@ -368,7 +368,7 @@ def build_combined_graph(df: pd.DataFrame, market_df: pd.DataFrame):
                 height=400
             ).interactive(bind_y=False)
 
-            st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(chart, width='stretch')
 
     with metrics_col:
         if not market_df.empty:

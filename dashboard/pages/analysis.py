@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.image("images/pivot_point.png", use_container_width=True)
+        st.image("images/pivot_point.png", width='stretch')
 
     st.title(body="Pivot Point",
              text_alignment="center")
@@ -31,4 +31,4 @@ if __name__ == "__main__":
 
     fig = adv_graph(commodity_id)
     if fig:
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
