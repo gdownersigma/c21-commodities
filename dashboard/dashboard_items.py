@@ -10,6 +10,7 @@ from psycopg2.extensions import connection
 from helper_functions import (clean_input,
                               authenticate_user_input,
                               invoke_historical_lambda)
+                              find_new_commodity)
 
 from query_data import (get_market_data_by_ids,
                         get_commodity_symbol_by_id)
@@ -25,7 +26,8 @@ def add_commodity_selector(commodity_options: list, i: int):
         label=f"Select Commodity {i + 1}",
         options=commodity_options,
         format_func=lambda x: x[1],
-        key=f"commodity_select_{i}"
+        key=f"commodity_select_{i}",
+        index=find_new_commodity()
     )
 
 

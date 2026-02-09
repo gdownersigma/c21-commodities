@@ -103,3 +103,18 @@ def invoke_historical_lambda(symbol: str) -> bool:
     )
 
     return response["StatusCode"] == 202
+  
+def find_new_commodity() -> int:
+    """Return first commodity ID index not currently in use."""
+
+    used_ids = {
+        st.session_state.selected_commodities[key][0]
+        for key in st.session_state.selected_commodities
+    }
+
+    for idx, comm_id in enumerate(st.session_state.subscribed_commodities):
+        if comm_id not in used_ids:
+            print(f"Found new commodity ID: {comm_id}")
+            return idx
+
+    return 0
