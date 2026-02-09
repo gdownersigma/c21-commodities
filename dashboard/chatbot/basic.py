@@ -2,6 +2,7 @@ import requests
 import os
 from dotenv import load_dotenv
 
+load_dotenv()
 
 def commodity_chatbot(user_message, conversation_history=None):
     """
