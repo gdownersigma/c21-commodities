@@ -85,7 +85,7 @@ def decrypt_and_verify(config: _Environ, var: str, encrypted_var: bytes) -> bool
 
 
 def find_new_commodity() -> int:
-    """Find the first commodity ID not currently in use."""
+    """Return first commodity ID index not currently in use."""
 
     used_ids = {
         st.session_state.selected_commodities[key][0]
@@ -97,4 +97,4 @@ def find_new_commodity() -> int:
             print(f"Found new commodity ID: {comm_id}")
             return idx
 
-    return None
+    return 0
