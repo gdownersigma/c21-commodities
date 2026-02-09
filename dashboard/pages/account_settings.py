@@ -3,7 +3,6 @@
 # pylint: disable=import-error
 
 import streamlit as st
-import pandas as pd
 
 from menu import menu_with_redirect
 from dashboard_items import page_redirect

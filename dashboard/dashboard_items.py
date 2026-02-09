@@ -4,7 +4,7 @@ import html
 import streamlit as st
 import pandas as pd
 import altair as alt
-from datetime import datetime, timedelta
+from datetime import timedelta
 from psycopg2.extensions import connection
 
 from helper_functions import (clean_input,

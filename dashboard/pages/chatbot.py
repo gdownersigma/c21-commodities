@@ -13,7 +13,8 @@ from dotenv import load_dotenv
 
 from menu import menu
 from dashboard_items import logout_button
-from query_data import get_connection, load_query
+from query_data import (get_connection,
+                        load_query)
 
 st.set_page_config(
     layout="centered",

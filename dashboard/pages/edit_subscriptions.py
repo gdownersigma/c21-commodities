@@ -4,7 +4,6 @@
 
 from os import environ as ENV
 import streamlit as st
-import pandas as pd
 
 from menu import menu_with_redirect
 from dashboard_items import (display_markdown_title,
