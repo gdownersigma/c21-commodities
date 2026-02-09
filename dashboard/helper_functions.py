@@ -103,7 +103,8 @@ def invoke_historical_lambda(symbol: str) -> bool:
     )
 
     return response["StatusCode"] == 202
-  
+
+
 def find_new_commodity() -> int:
     """Return first commodity ID index not currently in use."""
 
