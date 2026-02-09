@@ -8,7 +8,8 @@ from datetime import datetime, timedelta
 from psycopg2.extensions import connection
 
 from helper_functions import (clean_input,
-                              authenticate_user_input)
+                              authenticate_user_input,
+                              find_new_commodity)
 
 from query_data import (get_market_data_by_ids)
 
@@ -21,7 +22,7 @@ def add_commodity_selector(commodity_options: list, i: int):
         options=commodity_options,
         format_func=lambda x: x[1],
         key=f"commodity_select_{i}",
-        index=i
+        index=find_new_commodity()
     )
 
 
