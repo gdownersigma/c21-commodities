@@ -1,3 +1,5 @@
+"""Advanced Technical Analysis Graph Module for Commodity Data."""
+
 import streamlit as st
 import pandas as pd
 from psycopg2 import connect
@@ -5,14 +7,24 @@ from os import environ as ENV
 from dotenv import load_dotenv
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-
-load_dotenv()
-
-st.set_page_config(page_title="Commodity Chart", layout="wide")
+from contextlib import contextmanager
 
 
-def get_conn():
-    """Establishes and returns a connection to the PostgreSQL database."""
+# ==================== CONSTANTS ====================
+
+COLOR_BULLISH = '#26a69a'
+COLOR_BEARISH = '#ef5350'
+COLOR_MA_7 = '#FFA500'
+COLOR_MA_14 = '#00CED1'
+COLOR_MA_20 = '#FF69B4'
+
+
+# ==================== DATABASE FUNCTIONS ====================
+
+@contextmanager
+def get_db_connection():
+    """Yields a PostgreSQL database connection and ensures cleanup."""
+    load_dotenv()
     conn = connect(
         dbname=ENV.get("DB_NAME"),
         user=ENV.get("DB_USER"),
@@ -20,133 +32,137 @@ def get_conn():
         host=ENV.get("DB_HOST"),
         port=ENV.get("DB_PORT"),
     )
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 @st.cache_data(ttl=300)
-def fetch_data(query):
-    """Executes a SQL query and returns the results as a pandas DataFrame."""
-    conn = get_conn()
-    try:
-        df = pd.read_sql_query(query, conn)
-    finally:
-        conn.close()
+def fetch_data(commodity_id: int) -> pd.DataFrame:
+    """Fetches market data for a commodity using parameterized queries."""
+    query = """
+        SELECT * FROM market_records
+        JOIN commodities AS c
+        USING (commodity_id)
+        WHERE commodity_id = %s
+    """
+    with get_db_connection() as conn:
+        df = pd.read_sql_query(query, conn, params=(commodity_id,))
     return df
 
 
-SQL_QUERY = f"""
-SELECT * FROM market_records
-JOIN commodities AS c
-USING (commodity_id)
-WHERE commodity_id={st.session_state.analysis_commodity_id}"""
+# ==================== DATA PROCESSING ====================
 
-df = fetch_data(SQL_QUERY)
+def prepare_daily_data(df: pd.DataFrame) -> pd.DataFrame:
+    """Resamples data to daily OHLC candles and calculates moving averages."""
+    df_chart = df.copy()
+    df_chart = df_chart.sort_values('recorded_at', ascending=True)
 
-# Prepare data for candlestick chart
-df_chart = df.copy()
-df_chart = df_chart.sort_values('recorded_at', ascending=True)
+    df_daily = df_chart.resample('D', on='recorded_at').agg({
+        'open_price': 'first',
+        'day_high': 'max',
+        'day_low': 'min',
+        'price': 'last',
+        'volume': 'last',
+        'commodity_name': 'first',
+        'symbol': 'first'
+    }).dropna()
 
-# Resample mixed granularity data to daily OHLC candles
-df_daily = df_chart.resample('D', on='recorded_at').agg({
-    'open_price': 'first',
-    'day_high': 'max',
-    'day_low': 'min',
-    'price': 'last',
-    'volume': 'last',
-    'commodity_name': 'first',
-    'symbol': 'first'
-}).dropna()
+    return df_daily
 
-# Calculate Moving Averages
-df_daily['MA_7'] = df_daily['price'].rolling(window=7).mean()
-df_daily['MA_14'] = df_daily['price'].rolling(window=14).mean()
-df_daily['MA_20'] = df_daily['price'].rolling(window=20).mean()
 
-# Title
-commodity_name = df_daily['commodity_name'].iloc[0] if 'commodity_name' in df_daily.columns else "Commodity"
-symbol = df_daily['symbol'].iloc[0] if 'symbol' in df_daily.columns else ""
-st.title(f"📈 {commodity_name} ({symbol}) - Daily Chart")
+def calculate_moving_averages(df: pd.DataFrame) -> pd.DataFrame:
+    """Calculates 7, 14, and 20 day moving averages."""
+    df['MA_7'] = df['price'].rolling(window=7).mean()
+    df['MA_14'] = df['price'].rolling(window=14).mean()
+    df['MA_20'] = df['price'].rolling(window=20).mean()
+    return df
 
-# Sidebar controls
-st.sidebar.header("Chart Settings")
-show_ma7 = st.sidebar.checkbox("Show MA 7", value=True)
-show_ma14 = st.sidebar.checkbox("Show MA 14", value=True)
-show_ma20 = st.sidebar.checkbox("Show MA 20", value=True)
-show_volume = st.sidebar.checkbox("Show Volume", value=True)
 
-# Create subplots
-row_heights = [0.7, 0.3] if show_volume else [1.0]
-rows = 2 if show_volume else 1
+def get_price_metrics(df: pd.DataFrame) -> dict:
+    """Calculates price metrics for display."""
+    latest_price = df['price'].iloc[-1]
+    prev_price = df['price'].iloc[-2] if len(df) > 1 else latest_price
+    price_change = latest_price - prev_price
+    price_change_pct = (price_change / prev_price) * \
+        100 if prev_price != 0 else 0
 
-fig = make_subplots(
-    rows=rows, cols=1,
-    shared_xaxes=True,
-    vertical_spacing=0.03,
-    row_heights=row_heights,
-    subplot_titles=('Price', 'Volume') if show_volume else ('Price',)
-)
+    return {
+        'latest_price': latest_price,
+        'price_change_pct': price_change_pct,
+        'day_high': df['day_high'].iloc[-1],
+        'day_low': df['day_low'].iloc[-1],
+        'volume': df['volume'].iloc[-1]
+    }
 
-# Candlestick chart
-fig.add_trace(
-    go.Candlestick(
-        x=df_daily.index,
-        open=df_daily['open_price'],
-        high=df_daily['day_high'],
-        low=df_daily['day_low'],
-        close=df_daily['price'],
-        increasing_line_color='#26a69a',
-        decreasing_line_color='#ef5350',
-        name='Price'
-    ),
-    row=1, col=1
-)
 
-# Moving Averages
-if show_ma7:
+# ==================== CHART BUILDING ====================
+
+def create_figure(show_volume: bool) -> go.Figure:
+    """Creates the base Plotly figure with subplots."""
+    row_heights = [0.7, 0.3] if show_volume else [1.0]
+    rows = 2 if show_volume else 1
+
+    fig = make_subplots(
+        rows=rows, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.03,
+        row_heights=row_heights,
+        subplot_titles=('Price', 'Volume') if show_volume else ('Price',)
+    )
+    return fig
+
+
+def add_candlestick_trace(fig: go.Figure, df: pd.DataFrame) -> None:
+    """Adds candlestick chart to the figure."""
     fig.add_trace(
-        go.Scatter(
-            x=df_daily.index,
-            y=df_daily['MA_7'],
-            mode='lines',
-            name='MA 7',
-            line=dict(color='#FFA500', width=1.5)
+        go.Candlestick(
+            x=df.index,
+            open=df['open_price'],
+            high=df['day_high'],
+            low=df['day_low'],
+            close=df['price'],
+            increasing_line_color=COLOR_BULLISH,
+            decreasing_line_color=COLOR_BEARISH,
+            name='Price'
         ),
         row=1, col=1
     )
 
-if show_ma14:
-    fig.add_trace(
-        go.Scatter(
-            x=df_daily.index,
-            y=df_daily['MA_14'],
-            mode='lines',
-            name='MA 14',
-            line=dict(color='#00CED1', width=1.5)
-        ),
-        row=1, col=1
-    )
 
-if show_ma20:
-    fig.add_trace(
-        go.Scatter(
-            x=df_daily.index,
-            y=df_daily['MA_20'],
-            mode='lines',
-            name='MA 20',
-            line=dict(color='#FF69B4', width=1.5)
-        ),
-        row=1, col=1
-    )
+def add_moving_average_traces(fig: go.Figure, df: pd.DataFrame) -> None:
+    """Adds moving average lines to the figure."""
+    ma_configs = [
+        ('MA_7', 'MA 7', COLOR_MA_7),
+        ('MA_14', 'MA 14', COLOR_MA_14),
+        ('MA_20', 'MA 20', COLOR_MA_20),
+    ]
 
-# Volume bars
-if show_volume:
-    vol_colors = ['#26a69a' if df_daily['price'].iloc[i] >= df_daily['open_price'].iloc[i]
-                  else '#ef5350' for i in range(len(df_daily))]
+    for col, name, color in ma_configs:
+        fig.add_trace(
+            go.Scatter(
+                x=df.index,
+                y=df[col],
+                mode='lines',
+                name=name,
+                line=dict(color=color, width=1.5)
+            ),
+            row=1, col=1
+        )
+
+
+def add_volume_trace(fig: go.Figure, df: pd.DataFrame) -> None:
+    """Adds volume bars to the figure."""
+    vol_colors = [
+        COLOR_BULLISH if df['price'].iloc[i] >= df['open_price'].iloc[i] else COLOR_BEARISH
+        for i in range(len(df))
+    ]
 
     fig.add_trace(
         go.Bar(
-            x=df_daily.index,
-            y=df_daily['volume'],
+            x=df.index,
+            y=df['volume'],
             marker_color=vol_colors,
             name='Volume',
             showlegend=False
@@ -156,35 +172,98 @@ if show_volume:
     fig.update_yaxes(title_text="Volume", row=2, col=1)
     fig.update_xaxes(title_text="Date", row=2, col=1)
 
-# Update layout
-fig.update_layout(
-    template='plotly_dark',
-    xaxis_rangeslider_visible=False,
-    height=700,
-    hovermode='x unified',
-    legend=dict(
-        orientation='h',
-        yanchor='bottom',
-        y=1.02,
-        xanchor='left',
-        x=0
+
+def configure_layout(fig: go.Figure) -> None:
+    """Configures the figure layout and styling."""
+    fig.update_layout(
+        template='plotly_dark',
+        xaxis_rangeslider_visible=False,
+        height=700,
+        hovermode='x unified',
+        legend=dict(
+            orientation='h',
+            yanchor='bottom',
+            y=1.02,
+            xanchor='left',
+            x=0
+        )
     )
-)
+    fig.update_yaxes(title_text="Price", row=1, col=1)
 
-fig.update_yaxes(title_text="Price", row=1, col=1)
 
-# Display chart in Streamlit
-st.plotly_chart(fig, use_container_width=True)
+# ==================== UI COMPONENTS ====================
 
-# Stats section
-col1, col2, col3, col4 = st.columns(4)
-latest_price = df_daily['price'].iloc[-1]
-prev_price = df_daily['price'].iloc[-2] if len(df_daily) > 1 else latest_price
-price_change = latest_price - prev_price
-price_change_pct = (price_change / prev_price) * 100 if prev_price != 0 else 0
+def render_sidebar() -> dict:
+    """Renders sidebar controls and returns user selections."""
+    st.sidebar.header("Chart Settings")
+    return {
+        'show_volume': st.sidebar.checkbox("Show Volume", value=True)
+    }
 
-col1.metric("Latest Price", f"${latest_price:.2f}",
-            f"{price_change_pct:+.2f}%")
-col2.metric("Day High", f"${df_daily['day_high'].iloc[-1]:.2f}")
-col3.metric("Day Low", f"${df_daily['day_low'].iloc[-1]:.2f}")
-col4.metric("Volume", f"{df_daily['volume'].iloc[-1]:,.0f}")
+
+def render_title(df: pd.DataFrame) -> None:
+    """Renders the page title with commodity name and symbol."""
+    commodity_name = df['commodity_name'].iloc[0] if 'commodity_name' in df.columns else "Commodity"
+    symbol = df['symbol'].iloc[0] if 'symbol' in df.columns else ""
+    st.title(f"📈 {commodity_name} ({symbol}) - Daily Chart")
+
+
+def render_metrics(metrics: dict) -> None:
+    """Renders the price metrics in columns."""
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Latest Price", f"${metrics['latest_price']:.2f}",
+                f"{metrics['price_change_pct']:+.2f}%")
+    col2.metric("Day High", f"${metrics['day_high']:.2f}")
+    col3.metric("Day Low", f"${metrics['day_low']:.2f}")
+    col4.metric("Volume", f"{metrics['volume']:,.0f}")
+
+
+# ==================== MAIN FUNCTIONS ====================
+
+def build_chart(df: pd.DataFrame, settings: dict) -> go.Figure:
+    """Builds the complete chart with all traces and configuration."""
+    fig = create_figure(settings['show_volume'])
+    add_candlestick_trace(fig, df)
+    add_moving_average_traces(fig, df)
+    if settings['show_volume']:
+        add_volume_trace(fig, df)
+    configure_layout(fig)
+    return fig
+
+
+def adv_graph(commodity_id: int = None) -> go.Figure:
+    """Creates an advanced technical analysis graph for a commodity."""
+    if commodity_id is None:
+        commodity_id = st.session_state.get('analysis_commodity_id')
+        if commodity_id is None:
+            st.error("No commodity selected for analysis.")
+            return None
+
+    df = fetch_data(commodity_id)
+    if df.empty:
+        st.error("No data found for the selected commodity.")
+        return None
+
+    df_daily = prepare_daily_data(df)
+    df_daily = calculate_moving_averages(df_daily)
+
+    settings = render_sidebar()
+    render_title(df_daily)
+
+    fig = build_chart(df_daily, settings)
+    st.plotly_chart(fig, use_container_width=True)
+
+    metrics = get_price_metrics(df_daily)
+    render_metrics(metrics)
+
+    return fig
+
+
+def main() -> None:
+    """Entry point for running the chart as a standalone Streamlit page."""
+    st.set_page_config(page_title="Commodity Chart", layout="wide")
+    adv_graph()
+
+
+if __name__ == "__main__":
+    main()
