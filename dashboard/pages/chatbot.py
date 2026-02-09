@@ -367,11 +367,21 @@ If asked to do something you cannot do, politely explain the limitation and guid
         {"role": "user", "content": user_message}
     ]
 
+    api_key = ENV.get("CHATBOT_API_KEY")
+    if not api_key:
+        error_msg = (
+            "Chatbot API key is not configured. "
+            "Please set the CHATBOT_API_KEY environment variable (for example via your .env file) "
+            "and restart the application."
+        )
+        st.error(error_msg)
+        return error_msg, conversation_history
+
     try:
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={
-                "Authorization": f"Bearer {ENV.get('CHATBOT_API_KEY')}",
+                "Authorization": f"Bearer {api_key}",
                 "HTTP-Referer": "http://localhost:8501",
                 "X-Title": "Commodity Trading Chatbot",
                 "Content-Type": "application/json"
