@@ -62,28 +62,5 @@ Be concise, professional, and actionable. Use data-driven insights when possible
         return f"Error: {str(e)}", conversation_history
 
 
-# Test it with conversation memory!
 if __name__ == "__main__":
-    print("=== ICMA - Intelligent Commodity Market Analyst ===\n")
-    load_dotenv()
-
-    # Start a conversation
-    history = []
-
-    # First question
-    response, history = commodity_chatbot(
-        "Hello! What can you help me with?", history)
-    print(f"User: Hello! What can you help me with?")
-    print(f"ICMA: {response}\n")
-
-    # Follow-up question (it will remember context!)
-    response, history = commodity_chatbot(
-        "What's affecting gold prices recently?", history)
-    print(f"User: What's affecting gold prices recently?")
-    print(f"ICMA: {response}\n")
-
-    # Another follow-up
-    response, history = commodity_chatbot(
-        "Should I be worried about inflation?", history)
-    print(f"User: Should I be worried about inflation?")
-    print(f"ICMA: {response}\n")
+    pass
