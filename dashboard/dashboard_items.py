@@ -20,7 +20,8 @@ def add_commodity_selector(commodity_options: list, i: int):
         label=f"Select Commodity {i + 1}",
         options=commodity_options,
         format_func=lambda x: x[1],
-        key=f"commodity_select_{i}"
+        key=f"commodity_select_{i}",
+        index=i
     )
 
 
