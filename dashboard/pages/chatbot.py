@@ -12,6 +12,7 @@ import altair as alt
 from dotenv import load_dotenv
 
 from menu import menu
+from dashboard_items import logout_button
 from query_data import get_connection, load_query
 
 st.set_page_config(
@@ -408,6 +409,9 @@ def display_chat_history(conn):
 if __name__ == "__main__":
 
     menu()
+
+    if st.session_state.user:
+        logout_button()
 
     # Initialize chat history in session state
     if "chat_history" not in st.session_state:
