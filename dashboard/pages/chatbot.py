@@ -99,7 +99,7 @@ def get_chart_data(conn, commodity_ids: list, days: int = 7) -> pd.DataFrame:
     return df
 
 
-def get_commodity_id_by_name(conn, name: str) -> int:
+def get_commodity_id_by_name(conn, name: str) -> int | None:
     """Get commodity ID by name or symbol (case-insensitive partial match)."""
     with conn.cursor() as cur:
         cur.execute("""
