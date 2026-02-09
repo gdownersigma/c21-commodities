@@ -223,7 +223,7 @@ def build_single_commodity_graph(df: pd.DataFrame, market_df: pd.DataFrame, grap
 
 def build_combined_graph(df: pd.DataFrame, market_df: pd.DataFrame):
     """Build display for multiple commodities combined."""
-    slider_col, graph_col, metrics_col = st.columns([0.8, 4, 1.5])
+    slider_col, graph_col = st.columns([1.2, 5])
 
     if market_df.empty:
         with graph_col:
@@ -370,33 +370,41 @@ def build_combined_graph(df: pd.DataFrame, market_df: pd.DataFrame):
 
             st.altair_chart(chart, width='stretch')
 
-    with metrics_col:
-        if not market_df.empty:
-            # Show stats for each commodity
-            for comm_id in market_df['commodity_id'].unique():
-                comm_data = market_df[market_df['commodity_id'] == comm_id]
-                # Sort by date and get the most recent record
-                comm_data = comm_data.sort_values(
-                    'recorded_at', ascending=True)
-                comm_name = df[df['commodity_id'] ==
-                               comm_id]['commodity_name'].iloc[0]
-                latest = comm_data.iloc[-1]
-
-                st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, #03c1ff15 0%, #e2e8f030 100%); 
-                                border-left: 3px solid #03c1ff;
-                                border-radius: 8px; padding: 12px; margin-bottom: 10px;">
-                        <p style="color: #1e293b; font-weight: 600; margin: 0 0 5px 0;">{comm_name}</p>
-                        <p style="color: #03c1ff; font-size: 20px; font-weight: 700; margin: 0;">
-                            ${latest['price']:.2f}
-                            <span style="font-size: 14px; color: {'#22c55e' if latest['change_percentage'] >= 0 else '#ef4444'};">
-                                {'+' if latest['change_percentage'] >= 0 else ''}{latest['change_percentage']:.2f}%
-                            </span>
-                        </p>
-                    </div>
-                """, unsafe_allow_html=True)
+    if not market_df.empty:
+        build_combined_metrics(df, market_df)
 
     st.divider()
+
+
+def build_combined_metrics(df: pd.DataFrame, market_df: pd.DataFrame):
+    """Build key metrics display for combined graph."""
+
+    cols = st.columns(min(market_df['commodity_id'].nunique(), 4))
+
+    # Show stats for each commodity
+    for i, comm_id in enumerate(market_df['commodity_id'].unique()):
+        with cols[i % min(len(cols), 4)]:
+            comm_data = market_df[market_df['commodity_id'] == comm_id]
+            # Sort by date and get the most recent record
+            comm_data = comm_data.sort_values(
+                'recorded_at', ascending=True)
+            comm_name = df[df['commodity_id'] ==
+                           comm_id]['commodity_name'].iloc[0]
+            latest = comm_data.iloc[-1]
+
+            st.markdown(f"""
+                <div style="background: linear-gradient(135deg, #03c1ff15 0%, #e2e8f030 100%); 
+                            border-left: 3px solid #03c1ff;
+                            border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                    <p style="color: #1e293b; font-weight: 600; margin: 0 0 5px 0;">{comm_name}</p>
+                    <p style="color: #03c1ff; font-size: 20px; font-weight: 700; margin: 0;">
+                        ${latest['price']:.2f}
+                        <span style="font-size: 14px; color: {'#22c55e' if latest['change_percentage'] >= 0 else '#ef4444'};">
+                            {'+' if latest['change_percentage'] >= 0 else ''}{latest['change_percentage']:.2f}%
+                        </span>
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
 
 
 def build_form(conn: connection,

@@ -9,7 +9,7 @@ from menu import menu
 from adv_analysis.adv_graph import adv_graph
 
 st.set_page_config(
-    layout="centered"
+    layout="wide"
 )
 
 st.session_state.last_page = "analysis"

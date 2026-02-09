@@ -187,7 +187,7 @@ if __name__ == "__main__":
     if st.session_state.user:
         display_key_metrics(df, conn)
 
-        if st.session_state.num_commodities > 1:
+        if len(st.session_state.subscribed_commodities) > 1:
             display_combined_graph(df, conn)
 
     display_individual_graphs(df, conn)
