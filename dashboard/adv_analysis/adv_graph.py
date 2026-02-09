@@ -1,5 +1,3 @@
-"""Advanced Technical Analysis Graph Module"""
-
 import streamlit as st
 import pandas as pd
 from psycopg2 import connect
@@ -36,11 +34,11 @@ def fetch_data(query):
     return df
 
 
-SQL_QUERY = """
+SQL_QUERY = f"""
 SELECT * FROM market_records
 JOIN commodities AS c
 USING (commodity_id)
-WHERE commodity_id=10"""
+WHERE commodity_id={st.session_state.analysis_commodity_id}"""
 
 df = fetch_data(SQL_QUERY)
 
@@ -71,6 +69,9 @@ st.title(f"📈 {commodity_name} ({symbol}) - Daily Chart")
 
 # Sidebar controls
 st.sidebar.header("Chart Settings")
+show_ma7 = st.sidebar.checkbox("Show MA 7", value=True)
+show_ma14 = st.sidebar.checkbox("Show MA 14", value=True)
+show_ma20 = st.sidebar.checkbox("Show MA 20", value=True)
 show_volume = st.sidebar.checkbox("Show Volume", value=True)
 
 # Create subplots
@@ -100,39 +101,42 @@ fig.add_trace(
     row=1, col=1
 )
 
-# Moving Averages (toggle via Plotly legend)
-fig.add_trace(
-    go.Scatter(
-        x=df_daily.index,
-        y=df_daily['MA_7'],
-        mode='lines',
-        name='MA 7',
-        line=dict(color='#FFA500', width=1.5)
-    ),
-    row=1, col=1
-)
+# Moving Averages
+if show_ma7:
+    fig.add_trace(
+        go.Scatter(
+            x=df_daily.index,
+            y=df_daily['MA_7'],
+            mode='lines',
+            name='MA 7',
+            line=dict(color='#FFA500', width=1.5)
+        ),
+        row=1, col=1
+    )
 
-fig.add_trace(
-    go.Scatter(
-        x=df_daily.index,
-        y=df_daily['MA_14'],
-        mode='lines',
-        name='MA 14',
-        line=dict(color='#00CED1', width=1.5)
-    ),
-    row=1, col=1
-)
+if show_ma14:
+    fig.add_trace(
+        go.Scatter(
+            x=df_daily.index,
+            y=df_daily['MA_14'],
+            mode='lines',
+            name='MA 14',
+            line=dict(color='#00CED1', width=1.5)
+        ),
+        row=1, col=1
+    )
 
-fig.add_trace(
-    go.Scatter(
-        x=df_daily.index,
-        y=df_daily['MA_20'],
-        mode='lines',
-        name='MA 20',
-        line=dict(color='#FF69B4', width=1.5)
-    ),
-    row=1, col=1
-)
+if show_ma20:
+    fig.add_trace(
+        go.Scatter(
+            x=df_daily.index,
+            y=df_daily['MA_20'],
+            mode='lines',
+            name='MA 20',
+            line=dict(color='#FF69B4', width=1.5)
+        ),
+        row=1, col=1
+    )
 
 # Volume bars
 if show_volume:
