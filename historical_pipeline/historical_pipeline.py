@@ -16,6 +16,7 @@ def extract(symbol: str) -> pd.DataFrame:
     logging.info("Data extraction completed.")
     return df
 
+
 def transform(df: pd.DataFrame) -> pd.DataFrame:
     """Transform the extracted data to match the database schema."""
     logging.info("Starting data transformation...")
@@ -27,31 +28,34 @@ def transform(df: pd.DataFrame) -> pd.DataFrame:
     logging.info("Data transformation completed.")
     return df
 
+
 def load(df: pd.DataFrame):
     """Load the transformed data into the PostgreSQL database."""
     logging.info("Starting data loading...")
     load_data_to_db(df)
     logging.info("Data loading completed.")
 
+
 def handler(event, context):
     """AWS Lambda handler function."""
     load_dotenv()
     logging.basicConfig(level=logging.INFO)
-    
+
     symbol = event.get("symbol")
     if not symbol:
         return {"statusCode": 400, "body": "Missing required parameter: symbol"}
-    
+
     df_extracted = extract(symbol)
     df_transformed = transform(df_extracted)
     load(df_transformed)
     return {"statusCode": 200, "body": f"Historical pipeline completed successfully for {symbol}"}
 
+
 if __name__ == "__main__":
     load_dotenv()
     logging.basicConfig(level=logging.INFO)
     # For local testing, provide a symbol
-    test_symbol = "GCUSD"
+    test_symbol = "SIUSD"
     df_extracted = extract(test_symbol)
     df_transformed = transform(df_extracted)
     load(df_transformed)
