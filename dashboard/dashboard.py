@@ -45,9 +45,6 @@ if "user_commodities" not in st.session_state:
 if "analysis_commodity_id" not in st.session_state:
     st.session_state.analysis_commodity_id = -1
 
-if "switch_to_analysis" not in st.session_state:
-    st.session_state.switch_to_analysis = False
-
 if st.session_state.user and st.session_state.last_page != "dashboard":
     st.session_state.selected_commodities = {}
     st.session_state.num_commodities = 1
