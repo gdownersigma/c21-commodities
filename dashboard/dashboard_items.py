@@ -147,11 +147,12 @@ def build_single_commodity_graph(df: pd.DataFrame, market_df: pd.DataFrame, grap
                 key=f"price_min_{unique_key}_{time_range_hours}"
             )
 
-            # Analysis Mode button
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("📊 Analysis", key=f"analysis_{unique_key}", use_container_width=True):
-                st.session_state.analysis_mode = True
-                st.session_state.analysis_commodity_id = comm_id
+            if st.session_state.user:
+                # Analysis Mode button
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("📊 Analysis", key=f"analysis_{unique_key}", use_container_width=True):
+                    st.session_state.analysis_commodity_id = int(comm_id)
+                    st.switch_page("pages/analysis.py")
 
             # Ensure min is always less than max
             y_min = min(y_min_val, y_max_val)
@@ -338,13 +339,6 @@ def build_combined_graph(df: pd.DataFrame, market_df: pd.DataFrame):
                 format="%.2f",
                 key=f"combined_price_min_{time_range_hours}"
             )
-
-            # Analysis Mode button
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("📊 Analysis", key="analysis_combined", use_container_width=True):
-                st.session_state.analysis_mode = True
-                st.session_state.analysis_commodity_ids = list(
-                    market_df['commodity_id'].unique())
 
             # Ensure min is always less than max
             y_min = min(y_min_val, y_max_val)
