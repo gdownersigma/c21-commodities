@@ -86,7 +86,9 @@ def display_key_metrics(df: pd.DataFrame, conn):
         # Get the latest record for each commodity
         latest_per_commodity = market_df.sort_values(
             'recorded_at').groupby('commodity_id').last()
-        avg_change = latest_per_commodity['change_percentage'].mean()
+        avg_change = latest_per_commodity['change_percentage'].mean(skipna=True)
+        if pd.isna(avg_change):
+            avg_change = 0.0
     else:
         avg_change = 0.0
 
