@@ -13,6 +13,8 @@ st.set_page_config(
     layout="centered"
 )
 
+st.session_state.last_page = "edit_account"
+
 
 def handle_edit_account(conn, field_input):
     """Handle edit account logic."""

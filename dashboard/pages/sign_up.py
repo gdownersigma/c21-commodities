@@ -19,6 +19,8 @@ st.set_page_config(
     layout="centered"
 )
 
+st.session_state.last_page = "sign_up"
+
 
 def handle_signup(conn, field_input):
     """Handle signup logic."""

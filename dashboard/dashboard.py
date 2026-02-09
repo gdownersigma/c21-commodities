@@ -20,6 +20,9 @@ st.set_page_config(
     layout="wide"
 )
 
+if "last_page" not in st.session_state:
+    st.session_state.last_page = "dashboard"
+
 if "user" not in st.session_state:
     st.session_state.user = {}
 
@@ -38,6 +41,17 @@ if "subscribed_commodities" not in st.session_state:
 
 if "user_commodities" not in st.session_state:
     st.session_state.user_commodities = {}
+
+if "analysis_commodity_id" not in st.session_state:
+    st.session_state.analysis_commodity_id = -1
+
+if "switch_to_analysis" not in st.session_state:
+    st.session_state.switch_to_analysis = False
+
+if st.session_state.last_page != "dashboard":
+    st.session_state.selected_commodities = {}
+    st.session_state.num_commodities = 1
+    st.session_state.last_page = "dashboard"
 
 
 def build_sidebar(df: pd.DataFrame):
@@ -86,7 +100,8 @@ def display_key_metrics(df: pd.DataFrame, conn):
         # Get the latest record for each commodity
         latest_per_commodity = market_df.sort_values(
             'recorded_at').groupby('commodity_id').last()
-        avg_change = latest_per_commodity['change_percentage'].mean(skipna=True)
+        avg_change = latest_per_commodity['change_percentage'].mean(
+            skipna=True)
         if pd.isna(avg_change):
             avg_change = 0.0
     else:

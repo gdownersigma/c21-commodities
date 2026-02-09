@@ -18,6 +18,8 @@ st.set_page_config(
     layout="centered"
 )
 
+st.session_state.last_page = "log_in"
+
 
 def handle_login(conn, field_input):
     """Handle login logic."""
