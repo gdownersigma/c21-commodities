@@ -18,8 +18,6 @@ if __name__ == "__main__":
 
     menu()
 
-    commodity_id = st.session_state.get("analysis_commodity_id", 18)
-
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.image("images/pivot_point.png", width='stretch')
@@ -29,6 +27,6 @@ if __name__ == "__main__":
 
     st.divider()
 
-    fig = adv_graph(commodity_id)
+    fig = adv_graph(st.session_state.analysis_commodity_id)
     if fig:
         st.plotly_chart(fig, width='stretch')
