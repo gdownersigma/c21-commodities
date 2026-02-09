@@ -9,7 +9,7 @@ from psycopg2.extensions import connection
 
 from helper_functions import (clean_input,
                               authenticate_user_input,
-                              invoke_historical_lambda)
+                              invoke_historical_lambda,
                               find_new_commodity)
 
 from query_data import (get_market_data_by_ids,
