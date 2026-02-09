@@ -98,7 +98,7 @@ def get_password_by_email(_conn: connection, email: str):
 
     if data:
         password = data["password"]
-        
+
         return bytes(password) if isinstance(password, memoryview) else password
     return None
 
@@ -187,12 +187,24 @@ def delete_user_commodities(_conn: connection, user_id: int, comm_ids: list):
     _conn.commit()
 
 
+def get_commodity_symbol_by_id(_conn: connection, commodity_id: int) -> str:
+    """Return the symbol for a commodity by its ID."""
+
+    query = sql.SQL(load_query("get_commodity_symbol_by_id.sql"))
+
+    with _conn.cursor() as cur:
+        cur.execute(query, (commodity_id,))
+        result = cur.fetchone()
+
+    return result["symbol"] if result else None
+
+
 def update_user_commodities(_conn: connection, update_data: list[dict]):
     """Update user commodity prices using separate buy and sell queries."""
-    
+
     buy_updates = [item for item in update_data if "buy_price" in item]
     sell_updates = [item for item in update_data if "sell_price" in item]
-    
+
     with _conn.cursor() as cur:
         if buy_updates:
             query = sql.SQL(load_query("update_buy_prices.sql"))
@@ -203,7 +215,7 @@ def update_user_commodities(_conn: connection, update_data: list[dict]):
                 for item in buy_updates
             ]
             cur.executemany(query, buy_data)
-        
+
         if sell_updates:
             query = sql.SQL(load_query("update_sell_prices.sql"))
             sell_data = [
@@ -213,7 +225,7 @@ def update_user_commodities(_conn: connection, update_data: list[dict]):
                 for item in sell_updates
             ]
             cur.executemany(query, sell_data)
-    
+
     _conn.commit()
 
 
