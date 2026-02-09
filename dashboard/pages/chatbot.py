@@ -238,11 +238,18 @@ def build_market_context(conn) -> str:
     for row in latest_prices:
         if row['price']:
             change_str = f"{row['change_percentage']:+.2f}%" if row['change_percentage'] else "N/A"
-            context += f"• {row['commodity_name']} ({row['symbol']}): ${row['price']:.2f} {row['currency']} ({change_str})\n"
-            context += f"  Day Range: ${row['day_low']:.2f} - ${row['day_high']:.2f}\n"
-            if row['year_high'] and row['year_low']:
-                context += f"  52-Week Range: ${row['year_low']:.2f} - ${row['year_high']:.2f}\n"
+            price_str = f"${row['price']:.2f}"
+            day_low_str = f"${row['day_low']:.2f}" if row['day_low'] is not None else "N/A"
+            day_high_str = f"${row['day_high']:.2f}" if row['day_high'] is not None else "N/A"
+            context += f"• {row['commodity_name']} ({row['symbol']}): {price_str} {row['currency']} ({change_str})\n"
+            context += f"  Day Range: {day_low_str} - {day_high_str}\n"
 
+            year_low = row['year_low']
+            year_high = row['year_high']
+            if year_low is not None or year_high is not None:
+                year_low_str = f"${year_low:.2f}" if year_low is not None else "N/A"
+                year_high_str = f"${year_high:.2f}" if year_high is not None else "N/A"
+                context += f"  52-Week Range: {year_low_str} - {year_high_str}\n"
     return context
 
 
