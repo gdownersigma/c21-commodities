@@ -58,20 +58,6 @@ def get_latest_prices(conn) -> list:
         return cur.fetchall()
 
 
-def get_price_history(conn, commodity_id: int, days: int = 7) -> list:
-    """Get price history for a specific commodity."""
-    with conn.cursor() as cur:
-        cur.execute("""
-            SELECT recorded_at, price, change_percentage, day_high, day_low
-            FROM market_records
-            WHERE commodity_id = %s
-            AND recorded_at >= NOW() - INTERVAL '%s days'
-            ORDER BY recorded_at DESC
-            LIMIT 500
-        """, (commodity_id, days))
-        return cur.fetchall()
-
-
 def get_chart_data(conn, commodity_ids: list, days: int = 7) -> pd.DataFrame:
     """Get price history for multiple commodities as a DataFrame for charting."""
     with conn.cursor() as cur:
