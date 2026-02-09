@@ -2,14 +2,12 @@
 
 import streamlit as st
 import pandas as pd
-from psycopg2 import connect
 from os import environ as ENV
-from dotenv import load_dotenv
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from contextlib import contextmanager
 
 from query_data import (get_connection,
+                        fetch_data,
                         update_user_commodities,
                         get_commodities_with_user_subscriptions)
 
@@ -21,39 +19,6 @@ COLOR_BEARISH = '#ef5350'
 COLOR_MA_7 = '#FFA500'
 COLOR_MA_14 = '#00CED1'
 COLOR_MA_20 = '#FF69B4'
-
-
-# ==================== DATABASE FUNCTIONS ====================
-
-@contextmanager
-def get_db_connection():
-    """Yields a PostgreSQL database connection and ensures cleanup."""
-    load_dotenv()
-    conn = connect(
-        dbname=ENV.get("DB_NAME"),
-        user=ENV.get("DB_USER"),
-        password=ENV.get("DB_PASSWORD"),
-        host=ENV.get("DB_HOST"),
-        port=ENV.get("DB_PORT"),
-    )
-    try:
-        yield conn
-    finally:
-        conn.close()
-
-
-@st.cache_data(ttl=300)
-def fetch_data(commodity_id: int) -> pd.DataFrame:
-    """Fetches market data for a commodity using parameterized queries."""
-    query = """
-        SELECT * FROM market_records
-        JOIN commodities AS c
-        USING (commodity_id)
-        WHERE commodity_id = %s
-    """
-    with get_db_connection() as conn:
-        df = pd.read_sql_query(query, conn, params=(commodity_id,))
-    return df
 
 
 # ==================== DATA PROCESSING ====================
@@ -222,19 +187,6 @@ def render_metrics(metrics: dict) -> None:
     col4.metric("Volume", f"{metrics['volume']:,.0f}")
 
 
-# ==================== MAIN FUNCTIONS ====================
-
-def build_chart(df: pd.DataFrame, settings: dict) -> go.Figure:
-    """Builds the complete chart with all traces and configuration."""
-    fig = create_figure(settings['show_volume'])
-    add_candlestick_trace(fig, df)
-    add_moving_average_traces(fig, df)
-    if settings['show_volume']:
-        add_volume_trace(fig, df)
-    configure_layout(fig)
-    return fig
-
-
 def handle_submit(new_comm):
     """Handle buy/sell alert submission."""
 
@@ -279,8 +231,10 @@ def handle_submit(new_comm):
             "sell_price": new_comm["sell_price"]
         }
 
+        conn.close()
 
-def build_price_submission(comm_id: int):
+
+def build_price_edit_form(comm_id: int):
     """Builds the price submission form for buy/sell alerts."""
 
     st.sidebar.header("Buy/Sell Price Alerts")
@@ -340,6 +294,19 @@ def build_price_submission(comm_id: int):
             handle_submit(commodity_data)
 
 
+# ==================== MAIN FUNCTIONS ====================
+
+def build_chart(df: pd.DataFrame, settings: dict) -> go.Figure:
+    """Builds the complete chart with all traces and configuration."""
+    fig = create_figure(settings['show_volume'])
+    add_candlestick_trace(fig, df)
+    add_moving_average_traces(fig, df)
+    if settings['show_volume']:
+        add_volume_trace(fig, df)
+    configure_layout(fig)
+    return fig
+
+
 def adv_graph(commodity_id: int = None):
     """Creates an advanced technical analysis graph for a commodity."""
     if commodity_id is None:
@@ -348,7 +315,10 @@ def adv_graph(commodity_id: int = None):
             st.error("No commodity selected for analysis.")
             return None
 
-    df = fetch_data(commodity_id)
+    conn = get_connection(ENV)
+    df = fetch_data(conn, commodity_id)
+    conn.close()
+
     if df.empty:
         st.error("No data found for the selected commodity.")
         return None
@@ -358,7 +328,7 @@ def adv_graph(commodity_id: int = None):
 
     settings = render_sidebar()
     render_title(df_daily)
-    build_price_submission(commodity_id)
+    build_price_edit_form(commodity_id)
 
     metrics = get_price_metrics(df_daily)
     render_metrics(metrics)
