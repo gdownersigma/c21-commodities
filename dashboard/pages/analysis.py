@@ -3,7 +3,7 @@
 # pylint: disable=import-error
 import streamlit as st
 
-from menu import menu
+from menu import menu_with_redirect
 from adv_analysis.adv_graph import adv_graph
 
 st.set_page_config(
@@ -14,7 +14,7 @@ st.session_state.last_page = "analysis"
 
 if __name__ == "__main__":
 
-    menu()
+    menu_with_redirect()
 
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
