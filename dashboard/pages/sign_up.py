@@ -19,6 +19,8 @@ st.set_page_config(
     layout="centered"
 )
 
+st.session_state.last_page = "sign_up"
+
 
 def handle_signup(conn, field_input):
     """Handle signup logic."""
@@ -77,7 +79,7 @@ if __name__ == "__main__":
 
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.image("images/pivot_point.png", use_container_width=True)
+        st.image("images/pivot_point.png", width='stretch')
 
     st.title(body="Pivot Point",
              text_alignment="center")

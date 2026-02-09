@@ -25,6 +25,8 @@ st.set_page_config(
     layout="wide"
 )
 
+st.session_state.last_page = "edit_subscriptions"
+
 
 def build_commodity_titles():
     """Build commodity title row."""
