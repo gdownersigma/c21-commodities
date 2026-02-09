@@ -115,7 +115,6 @@ def find_new_commodity() -> int:
 
     for idx, comm_id in enumerate(st.session_state.subscribed_commodities):
         if comm_id not in used_ids:
-            print(f"Found new commodity ID: {comm_id}")
             return idx
 
     return 0
