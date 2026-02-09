@@ -82,3 +82,19 @@ def decrypt_and_verify(config: _Environ, var: str, encrypted_var: bytes) -> bool
     decrypted_var = cipher_suite.decrypt(encrypted_var)
 
     return checkpw(var.encode('utf-8'), decrypted_var)
+
+
+def find_new_commodity() -> int:
+    """Return first commodity ID index not currently in use."""
+
+    used_ids = {
+        st.session_state.selected_commodities[key][0]
+        for key in st.session_state.selected_commodities
+    }
+
+    for idx, comm_id in enumerate(st.session_state.subscribed_commodities):
+        if comm_id not in used_ids:
+            print(f"Found new commodity ID: {comm_id}")
+            return idx
+
+    return 0
