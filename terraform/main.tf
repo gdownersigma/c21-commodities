@@ -219,13 +219,14 @@ resource "aws_lambda_function" "report" {
 
   environment {
     variables = {
-      DB_HOST      = aws_db_instance.postgres.address
-      DB_PORT      = "5432"
-      DB_NAME      = var.db_name
-      DB_USER      = var.db_username
-      DB_PASSWORD  = var.db_password
-      MPLCONFIGDIR = "/tmp"
-      SENDER_EMAIL = var.sender_email
+      DB_HOST            = aws_db_instance.postgres.address
+      DB_PORT            = "5432"
+      DB_NAME            = var.db_name
+      DB_USER            = var.db_username
+      DB_PASSWORD        = var.db_password
+      MPLCONFIGDIR       = "/tmp"
+      SENDER_EMAIL       = var.sender_email
+      OPENROUTER_API_KEY = var.openrouter_api_key
     }
   }
 }

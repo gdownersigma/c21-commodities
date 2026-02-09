@@ -1,5 +1,6 @@
 """Script to generate HTML reports for each user from extracted data."""
 import os
+from os import environ as ENV
 from io import BytesIO
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -8,6 +9,7 @@ import boto3
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import requests
 from report_extract import (
     get_previous_day_date,
     extract_user_commodities,
@@ -89,7 +91,6 @@ def generate_price_chart(symbol: str, commodity_name: str,
     start_price = prices.iloc[0]
     end_price = prices.iloc[-1]
     if start_price == 0:
-        # Avoid division by zero; treat change as 0% if the starting price is zero.
         change_pct = 0.0
     else:
         change_pct = ((end_price - start_price) / start_price) * 100
@@ -123,6 +124,63 @@ def calculate_profit_loss(row: pd.Series) -> dict:
     return {"profit_loss": profit_loss, "profit_loss_pct": profit_loss_pct}
 
 
+def generate_ai_summary(user_data: pd.DataFrame, report_date) -> str:
+    """Generate an AI summary of the user's commodity performance using OpenRouter."""
+    api_key = ENV.get("OPENROUTER_API_KEY")
+    if not api_key:
+        print("OPENROUTER_API_KEY not configured")
+        return ""
+
+    commodities_info = []
+    for _, row in user_data.iterrows():
+        change = row["close_price"] - row["open_price_calc"]
+        change_pct = (change / row["open_price_calc"]) * \
+            100 if row["open_price_calc"] != 0 else 0
+        pl = calculate_profit_loss(row)
+
+        info = f"- {row['commodity_name']} ({row['symbol']}): Open ${row['open_price_calc']:.2f}, Close ${row['close_price']:.2f}, Change {change_pct:+.2f}%"
+        if pl["profit_loss"] is not None:
+            info += f", P/L {pl['profit_loss_pct']:+.2f}%"
+        commodities_info.append(info)
+
+    commodities_text = "\n".join(commodities_info)
+
+    prompt = f"""You are a professional commodities market analyst providing a daily briefing to an investor.
+
+Based on the following portfolio performance data for {report_date.strftime('%B %d, %Y')}:
+
+{commodities_text}
+
+Write a concise friendly 3-4 sentence analysis that includes:
+1. A brief summary of overall portfolio performance (gains/losses)
+2. Highlight the best and worst performers
+3. One actionable insight or trend to watch based on the price movements
+
+Keep the tone professional but approachable and friendly don't make it too complex. Do not include greetings or sign-offs."""
+
+    try:
+        response = requests.post(
+            url="https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "HTTP-Referer": "http://localhost:8501",
+                "X-Title": "Pivot Point Daily Report",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "openai/gpt-5-nano",
+                "messages": [{"role": "user", "content": prompt}]
+            },
+            timeout=30
+        )
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"].strip()
+    except Exception as e:
+        print(f"AI summary generation failed: {e}")
+        return ""
+
+
 def generate_user_html_report(user_name: str, user_data: pd.DataFrame,
                               report_date, market_df: pd.DataFrame) -> dict:
     """Generate HTML report for a single user. Returns dict with html and images."""
@@ -130,6 +188,8 @@ def generate_user_html_report(user_name: str, user_data: pd.DataFrame,
     rows_html = ""
     charts_html = ""
     images = {}
+
+    ai_summary = generate_ai_summary(user_data, report_date)
 
     for _, row in user_data.iterrows():
         pl = calculate_profit_loss(row)
@@ -192,6 +252,8 @@ def generate_user_html_report(user_name: str, user_data: pd.DataFrame,
         </tr>
     </table>
     
+    {'<table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #1DAEEC 0%, #0D8BC2 100%); border-radius: 10px; margin-bottom: 20px;"><tr><td style="padding: 20px;"><h3 style="margin: 0 0 10px 0; color: white;">✨ AI Market Summary</h3><p style="margin: 0; color: white; line-height: 1.6;">' + ai_summary + '</p></td></tr></table>' if ai_summary else ''}
+    
     <table width="100%" cellpadding="0" cellspacing="0" style="background: white; border-radius: 10px; margin-bottom: 20px;">
         <tr>
             <td style="padding: 20px;">
@@ -204,13 +266,13 @@ def generate_user_html_report(user_name: str, user_data: pd.DataFrame,
     <table width="100%" cellpadding="0" cellspacing="0" style="background: white; border-radius: 10px; border-collapse: collapse;">
         <tr style="background: #F7941D;">
             <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Commodity</th>
-            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Open</th>
-            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Close</th>
+            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Open Price</th>
+            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Close Price</th>
             <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Change</th>
-            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Low</th>
-            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">High</th>
+            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Day Low</th>
+            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Day High</th>
             <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Volume</th>
-            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">P/L</th>
+            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Potential P/L</th>
         </tr>
         {rows_html}
     </table>
@@ -318,7 +380,7 @@ def handler(event, context):
 
     print(f"Generated {len(reports)} reports.")
 
-    sender_email = os.environ.get("SENDER_EMAIL")
+    sender_email = ENV.get("SENDER_EMAIL")
     if not sender_email:
         print("ERROR: SENDER_EMAIL environment variable not set")
         return {"statusCode": 500, "error": "SENDER_EMAIL not configured"}

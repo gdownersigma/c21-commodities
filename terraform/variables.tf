@@ -65,6 +65,12 @@ variable "sender_email" {
   type        = string
 }
 
+variable "openrouter_api_key" {
+  description = "OpenRouter API key for AI summaries in daily reports"
+  type        = string
+  sensitive   = true
+}
+
 variable "ecs_cluster_name" {
   description = "Name of the existing ECS cluster"
   type        = string
