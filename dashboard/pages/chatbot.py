@@ -12,7 +12,7 @@ import altair as alt
 from dotenv import load_dotenv
 
 from menu import menu
-from query_data import get_connection
+from query_data import get_connection, load_query
 
 st.set_page_config(
     layout="centered",
@@ -25,71 +25,30 @@ load_dotenv()
 def get_all_commodities(conn) -> list:
     """Get all available commodities."""
     with conn.cursor() as cur:
-        cur.execute("""
-            SELECT commodity_id, symbol, commodity_name, currency 
-            FROM commodities 
-            ORDER BY commodity_name
-        """)
+        cur.execute(load_query("chatbot_get_all_commodities.sql"))
         return cur.fetchall()
 
 
 def get_latest_prices(conn) -> list:
     """Get the latest price for each commodity."""
     with conn.cursor() as cur:
-        cur.execute("""
-            SELECT DISTINCT ON (c.commodity_id)
-                c.commodity_id,
-                c.symbol,
-                c.commodity_name,
-                c.currency,
-                m.price,
-                m.change,
-                m.change_percentage,
-                m.day_high,
-                m.day_low,
-                m.volume,
-                m.year_high,
-                m.year_low,
-                m.recorded_at
-            FROM commodities c
-            LEFT JOIN market_records m ON c.commodity_id = m.commodity_id
-            ORDER BY c.commodity_id, m.recorded_at DESC
-        """)
+        cur.execute(load_query("chatbot_get_latest_prices.sql"))
         return cur.fetchall()
 
 
 def get_price_history(conn, commodity_id: int, days: int = 7) -> list:
     """Get price history for a specific commodity."""
     with conn.cursor() as cur:
-        cur.execute("""
-            SELECT recorded_at, price, change_percentage, day_high, day_low
-            FROM market_records
-            WHERE commodity_id = %s
-            AND recorded_at >= NOW() - INTERVAL '%s days'
-            ORDER BY recorded_at DESC
-            LIMIT 500
-        """, (commodity_id, days))
+        cur.execute(load_query("chatbot_get_price_history.sql"),
+                    (commodity_id, days))
         return cur.fetchall()
 
 
 def get_chart_data(conn, commodity_ids: list, days: int = 7) -> pd.DataFrame:
     """Get price history for multiple commodities as a DataFrame for charting."""
     with conn.cursor() as cur:
-        cur.execute("""
-            SELECT 
-                m.recorded_at,
-                m.price,
-                m.change_percentage,
-                m.day_high,
-                m.day_low,
-                c.commodity_name,
-                c.symbol
-            FROM market_records m
-            JOIN commodities c ON m.commodity_id = c.commodity_id
-            WHERE m.commodity_id IN %s
-            AND m.recorded_at >= NOW() - INTERVAL '%s days'
-            ORDER BY m.recorded_at ASC
-        """, (tuple(commodity_ids), days))
+        cur.execute(load_query("chatbot_get_chart_data.sql"),
+                    (tuple(commodity_ids), days))
         rows = cur.fetchall()
 
     if not rows:
@@ -102,13 +61,8 @@ def get_chart_data(conn, commodity_ids: list, days: int = 7) -> pd.DataFrame:
 def get_commodity_id_by_name(conn, name: str) -> int:
     """Get commodity ID by name or symbol (case-insensitive partial match)."""
     with conn.cursor() as cur:
-        cur.execute("""
-            SELECT commodity_id 
-            FROM commodities 
-            WHERE LOWER(commodity_name) LIKE LOWER(%s)
-            OR LOWER(symbol) LIKE LOWER(%s)
-            LIMIT 1
-        """, (f"%{name}%", f"%{name}%"))
+        cur.execute(load_query("chatbot_get_commodity_id_by_name.sql"),
+                    (f"%{name}%", f"%{name}%"))
         result = cur.fetchone()
         return result['commodity_id'] if result else None
 
@@ -205,23 +159,8 @@ def remove_chart_tags(response: str) -> str:
 def get_user_subscriptions(conn, user_id: int) -> list:
     """Get user's subscribed commodities with current prices."""
     with conn.cursor() as cur:
-        cur.execute("""
-            SELECT DISTINCT ON (c.commodity_id)
-                c.commodity_id,
-                c.symbol,
-                c.commodity_name,
-                uc.buy_price as alert_buy_price,
-                uc.sell_price as alert_sell_price,
-                m.price as current_price,
-                m.change_percentage,
-                m.day_high,
-                m.day_low
-            FROM user_commodities uc
-            JOIN commodities c ON uc.commodity_id = c.commodity_id
-            LEFT JOIN market_records m ON c.commodity_id = m.commodity_id
-            WHERE uc.user_id = %s
-            ORDER BY c.commodity_id, m.recorded_at DESC
-        """, (user_id,))
+        cur.execute(load_query(
+            "chatbot_get_user_subscriptions.sql"), (user_id,))
         return cur.fetchall()
 
 
@@ -422,7 +361,8 @@ def display_chat_history(conn):
                         with conn.cursor() as cur:
                             for name in commodities:
                                 cur.execute(
-                                    "SELECT commodity_id FROM commodities WHERE commodity_name ILIKE %s OR symbol ILIKE %s",
+                                    load_query(
+                                        "chatbot_get_commodity_id_for_chart.sql"),
                                     (f"%{name}%", f"%{name}%")
                                 )
                                 result = cur.fetchone()
@@ -556,7 +496,8 @@ if __name__ == "__main__":
                         with conn.cursor() as cur:
                             for name in commodities:
                                 cur.execute(
-                                    "SELECT commodity_id FROM commodities WHERE commodity_name ILIKE %s OR symbol ILIKE %s",
+                                    load_query(
+                                        "chatbot_get_commodity_id_for_chart.sql"),
                                     (f"%{name}%", f"%{name}%")
                                 )
                                 result = cur.fetchone()
