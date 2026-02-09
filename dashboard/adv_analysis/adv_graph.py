@@ -1,3 +1,5 @@
+"""Advanced Technical Analysis Graph Module"""
+
 import streamlit as st
 import pandas as pd
 from psycopg2 import connect
