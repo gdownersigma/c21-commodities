@@ -9,6 +9,10 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from contextlib import contextmanager
 
+from query_data import (get_connection,
+                        update_user_commodities,
+                        get_commodities_with_user_subscriptions)
+
 
 # ==================== CONSTANTS ====================
 
@@ -231,7 +235,112 @@ def build_chart(df: pd.DataFrame, settings: dict) -> go.Figure:
     return fig
 
 
-def adv_graph(commodity_id: int = None) -> go.Figure:
+def handle_submit(new_comm):
+    """Handle buy/sell alert submission."""
+
+    orig_comm = st.session_state.user_commodities[new_comm["id"]]
+
+    update_subscriptions = []
+
+    if not new_comm["buy"] and new_comm["buy_price"] != 0.0:
+        new_comm["buy_price"] = 0.0
+
+    if not new_comm["sell"] and new_comm["sell_price"] != 0.0:
+        new_comm["sell_price"] = 0.0
+
+    update = {}
+
+    if new_comm["buy_price"] != orig_comm["buy_price"]:
+        update["buy_price"] = new_comm["buy_price"]
+
+    if new_comm["sell_price"] != orig_comm["sell_price"]:
+        update["sell_price"] = new_comm["sell_price"]
+
+    if update:
+        update["user_id"] = st.session_state.user["user_id"]
+        update["commodity_id"] = new_comm["id"]
+        update_subscriptions.append(update)
+
+    if not update_subscriptions:
+        st.error("No changes made.")
+    else:
+        conn = get_connection(ENV)
+
+        update_user_commodities(conn, update_subscriptions)
+        get_commodities_with_user_subscriptions.clear()
+
+        st.success("Subscriptions updated successfully!")
+        st.session_state.user_commodities[new_comm["id"]] = {
+            "name": new_comm["name"],
+            "track": True,
+            "buy": new_comm["buy"],
+            "sell": new_comm["sell"],
+            "buy_price": new_comm["buy_price"],
+            "sell_price": new_comm["sell_price"]
+        }
+
+
+def build_price_submission(comm_id: int):
+    """Builds the price submission form for buy/sell alerts."""
+
+    st.sidebar.header("Buy/Sell Price Alerts")
+
+    comm = {
+        "id": comm_id,
+        **st.session_state.user_commodities[comm_id]
+    }
+
+    commodity_data = {
+        "id": comm["id"],
+        "name": comm["name"]
+    }
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        commodity_data["buy"] = st.sidebar.checkbox(
+            "Buy",
+            value=comm["buy"],
+            key=f"buy_{comm["id"]}_alert")
+
+    with col2:
+        commodity_data["buy_price"] = st.sidebar.number_input(
+            "Buy Price",
+            value=comm["buy_price"],
+            min_value=0.0,
+            max_value=1000000.0,
+            step=0.01,
+            format="%.2f",
+            key=f"buy_price_{comm["id"]}",
+            disabled=not commodity_data["buy"],
+            width=200)
+
+    col3, col4 = st.columns(2)
+
+    with col3:
+        commodity_data["sell"] = st.sidebar.checkbox(
+            "Sell",
+            value=comm["sell"],
+            key=f"sell_{comm["id"]}_alert")
+
+    with col4:
+        commodity_data["sell_price"] = st.sidebar.number_input(
+            "Sell Price",
+            value=float(comm["sell_price"]),
+            min_value=0.0,
+            max_value=1000000.0,
+            step=0.01,
+            format="%.2f",
+            key=f"sell_price_{comm["id"]}",
+            disabled=not commodity_data["sell"],
+            width=200)
+
+    with st.sidebar.container(horizontal_alignment="center"):
+        if st.sidebar.button("Submit"):
+            handle_submit(commodity_data)
+
+
+def adv_graph(commodity_id: int = None):
     """Creates an advanced technical analysis graph for a commodity."""
     if commodity_id is None:
         commodity_id = st.session_state.get('analysis_commodity_id')
@@ -249,14 +358,13 @@ def adv_graph(commodity_id: int = None) -> go.Figure:
 
     settings = render_sidebar()
     render_title(df_daily)
-
-    fig = build_chart(df_daily, settings)
-    st.plotly_chart(fig, use_container_width=True)
+    build_price_submission(commodity_id)
 
     metrics = get_price_metrics(df_daily)
     render_metrics(metrics)
 
-    return fig
+    fig = build_chart(df_daily, settings)
+    st.plotly_chart(fig, width='stretch')
 
 
 def main() -> None:
