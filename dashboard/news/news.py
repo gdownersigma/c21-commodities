@@ -319,8 +319,8 @@ def render_prices_tab():
 
 def render_statistics_tab(processed_news: list, filtered_news: list):
     """Render the Statistics tab."""
-    st.subheader("📊 News Statistics")
-    if not filtered_news:
+    st.subheader("📊 Overall News Statistics")
+    if not processed_news:
         st.info("No statistics available.")
         return
     commodity_counts, tag_counts = {}, {}
