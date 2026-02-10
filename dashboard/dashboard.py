@@ -6,15 +6,15 @@ import pandas as pd
 import streamlit as st
 
 from menu import menu
+from query_data import (get_connection,
+                        get_commodity_data_by_ids,
+                        get_market_data_by_ids)
 from helper_functions import (add_commodity,
                               remove_commodity)
 from dashboard_items import (add_commodity_selector,
                              build_single_commodity_graph,
                              build_combined_graph,
                              logout_button)
-from query_data import (get_connection,
-                        get_commodity_data_by_ids,
-                        get_market_data_by_ids)
 
 st.set_page_config(
     layout="wide"
@@ -123,15 +123,25 @@ def display_key_metrics(df: pd.DataFrame, conn):
                             border-radius: 15px;
                             padding: 25px 40px;
                             min-width: 200px;">
-                    <p style="color: #64748b; font-size: 14px; margin: 0 0 8px 0;">Subscribed Commodities</p>
-                    <p style="color: #ff801d; font-size: 42px; font-weight: 700; margin: 0;">{num_commodities}</p>
+                    <p style="color: #64748b; font-size: 14px; margin: 0 0 8px 0;">
+                        Subscribed Commodities
+                    </p>
+                    <p style="color: #ff801d; font-size: 42px; font-weight: 700; margin: 0;">
+                        {num_commodities}
+                    </p>
                 </div>
-                <div style="background: linear-gradient(135deg, {change_color}15 0%, {change_color}30 100%);
-                            border: 2px solid {change_color};
-                            border-radius: 15px;
-                            padding: 25px 40px;
-                            min-width: 200px;">
-                    <p style="color: #64748b; font-size: 14px; margin: 0 0 8px 0;">Average Price Change</p>
+                <div style="background: 
+                    linear-gradient(135deg, 
+                    {change_color}15 0%,
+                    {change_color}30 100%);
+                    border: 2px solid {change_color};
+                    border-radius: 15px;
+                    padding: 25px 40px;
+                    min-width: 200px;"
+                >
+                    <p style="color: #64748b; font-size: 14px; margin: 0 0 8px 0;">
+                        Average Price Change
+                    </p>
                     <p style="color: {change_color}; font-size: 42px; font-weight: 700; margin: 0;">
                         {arrow} {'+' if avg_change >= 0 else ''}{avg_change:.2f}%
                     </p>
@@ -149,26 +159,26 @@ def display_combined_graph(df: pd.DataFrame, conn):
     build_combined_graph(df, market_df)
 
 
-def display_individual_graphs(df: pd.DataFrame, conn):
+def display_individual_graphs(conn):
     """Display individual graphs for each selected commodity."""
 
     for i in range(st.session_state.num_commodities):
         comm_id = st.session_state.selected_commodities[f"commodity_{i}"][0]
-        filtered_df = df[df["commodity_id"] == comm_id]
+        commodity_name = st.session_state.selected_commodities[f"commodity_{i}"][1]
         market_df = get_market_data_by_ids(conn, [comm_id])
 
-        st.subheader(f"{filtered_df['commodity_name'].iloc[0]}")
-        build_single_commodity_graph(filtered_df, market_df, graph_index=i)
+        st.subheader(f"{commodity_name}")
+        build_single_commodity_graph(market_df, graph_index=i)
 
 
 if __name__ == "__main__":
 
     load_dotenv()
 
-    conn = get_connection(ENV)
+    connection = get_connection(ENV)
 
-    df = get_commodity_data_by_ids(
-        conn,
+    df_data = get_commodity_data_by_ids(
+        connection,
         st.session_state.subscribed_commodities
     )
 
@@ -179,14 +189,14 @@ if __name__ == "__main__":
 
     st.divider()
 
-    build_sidebar(df)
+    build_sidebar(df_data)
 
     if st.session_state.user:
-        display_key_metrics(df, conn)
+        display_key_metrics(df_data, connection)
 
         if len(st.session_state.subscribed_commodities) > 1:
-            display_combined_graph(df, conn)
+            display_combined_graph(df_data, connection)
 
-    display_individual_graphs(df, conn)
+    display_individual_graphs(connection)
 
-    conn.close()
+    connection.close()

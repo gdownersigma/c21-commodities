@@ -1,20 +1,21 @@
 """Page for ICMA - Intelligent Commodity Market Analyst chatbot."""
 
-# pylint: disable=import-error
+# pylint: disable=relative-beyond-top-level, redefined-outer-name
 
-import re
-import requests
-import json
 from os import environ as ENV
+import json
+import re
+
+from dotenv import load_dotenv
+import requests
 import streamlit as st
 import pandas as pd
 import altair as alt
-from dotenv import load_dotenv
 
-from menu import menu
-from dashboard_items import logout_button
-from query_data import (get_connection,
-                        load_query)
+from ..menu import menu
+from ..dashboard_items import logout_button
+from ..query_data import (get_connection,
+                          load_query)
 
 st.set_page_config(
     layout="centered",
@@ -215,7 +216,11 @@ def build_user_context(conn, user_id: int) -> str:
     return context
 
 
-def get_chatbot_response(user_message: str, conversation_history: list, market_context: str, user_context: str, commodity_list: str) -> tuple:
+def get_chatbot_response(user_message: str,
+                         conversation_history: list,
+                         market_context: str,
+                         user_context: str,
+                         commodity_list: str) -> tuple:
     """Get response from the ICMA chatbot with database context."""
 
     system_prompt = {
@@ -419,18 +424,18 @@ if __name__ == "__main__":
         st.session_state.chat_history = []
 
     # Connect to database
-    conn = get_connection(ENV)
+    connection = get_connection(ENV)
 
     # Build market context from database
-    market_context = build_market_context(conn)
+    market_context = build_market_context(connection)
 
     # Build commodity list for chart generation
-    commodity_list = build_commodity_list(conn)
+    commodity_list = build_commodity_list(connection)
 
     # Build user context if logged in
     if st.session_state.get("user"):
         user_context = build_user_context(
-            conn, st.session_state.user["user_id"])
+            connection, st.session_state.user["user_id"])
     else:
         user_context = "User is not logged in - no personalized data available."
 
@@ -471,7 +476,7 @@ if __name__ == "__main__":
                 </div>
             """, unsafe_allow_html=True)
         else:
-            display_chat_history(conn)
+            display_chat_history(connection)
 
     # Clear chat button in sidebar
     if st.session_state.chat_history:
@@ -515,7 +520,7 @@ if __name__ == "__main__":
 
                         # Get commodity IDs from names
                         commodity_ids = []
-                        with conn.cursor() as cur:
+                        with connection.cursor() as cur:
                             for name in commodities:
                                 cur.execute(
                                     load_query(
@@ -530,7 +535,7 @@ if __name__ == "__main__":
                         if commodity_ids:
                             # Get chart data
                             chart_df = get_chart_data(
-                                conn, commodity_ids, days)
+                                connection, commodity_ids, days)
                             if not chart_df.empty:
                                 chart = create_price_chart(chart_df, title)
                                 st.altair_chart(
@@ -546,4 +551,4 @@ if __name__ == "__main__":
 
         st.rerun()
 
-    conn.close()
+    connection.close()

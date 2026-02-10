@@ -1,12 +1,12 @@
 """Page for commodity pivot point analysis."""
 
-# pylint: disable=import-error
+# pylint: disable=relative-beyond-top-level
 
 import streamlit as st
 
-from menu import menu_with_redirect
-from adv_analysis.adv_graph import adv_graph
-from dashboard_items import logout_button
+from ..menu import menu_with_redirect
+from ..dashboard_items import logout_button
+from ..adv_analysis.adv_graph import adv_graph
 
 st.set_page_config(
     layout="wide"

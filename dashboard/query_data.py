@@ -82,8 +82,8 @@ def get_user_by_email(_conn: connection, email: str) -> dict:
 
         if data:
             return dict(data)
-        else:
-            return {}
+
+        return {}
 
 
 def get_password_by_email(_conn: connection, email: str):
@@ -251,7 +251,7 @@ if __name__ == "__main__":
     conn = get_connection(ENV)
 
     # data = get_commodities_with_user_subscriptions(conn, 16)
-    data = get_password_by_email(conn, "test4@example.com")
-    print(data)
+    # data = get_password_by_email(conn, "test4@example.com")
+    # print(data)
 
     conn.close()

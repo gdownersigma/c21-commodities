@@ -1,19 +1,19 @@
 """File to hold functions to create items in the dashboard."""
 
+from os import environ as ENV
+from datetime import timedelta
 import html
 import streamlit as st
 import pandas as pd
 import altair as alt
-from datetime import timedelta
 from psycopg2.extensions import connection
 
+from query_data import (get_connection,
+                        get_commodity_symbol_by_id)
 from helper_functions import (clean_input,
                               authenticate_user_input,
                               invoke_historical_lambda,
                               find_new_commodity)
-
-from query_data import (get_market_data_by_ids,
-                        get_commodity_symbol_by_id)
 
 # Default commodities that have continuous data (don't need historical fetch)
 DEFAULT_COMMODITY_IDS = {10, 18, 40}
@@ -31,9 +31,9 @@ def add_commodity_selector(commodity_options: list, i: int):
     )
 
 
-def build_single_commodity_graph(df: pd.DataFrame, market_df: pd.DataFrame, graph_index: int = 0):
-    """Build display for a single commodity.
-    """
+def build_single_commodity_graph(market_df: pd.DataFrame,
+                                 graph_index: int = 0):
+    """Build display for a single commodity."""
     # Create columns: zoom slider | graph | metrics
     slider_col, graph_col, metrics_col = st.columns([0.8, 4, 1.5])
 
@@ -74,8 +74,6 @@ def build_single_commodity_graph(df: pd.DataFrame, market_df: pd.DataFrame, grap
         # Fetch historical data if needed (only for non-default commodities)
         if requested_min_time < data_min_time and int(comm_id) not in DEFAULT_COMMODITY_IDS:
             if f"fetching_{comm_id}" not in st.session_state:
-                from query_data import get_connection
-                from os import environ as ENV
                 conn = get_connection(ENV)
                 symbol = get_commodity_symbol_by_id(conn, int(comm_id))
                 conn.close()
@@ -83,11 +81,6 @@ def build_single_commodity_graph(df: pd.DataFrame, market_df: pd.DataFrame, grap
                     invoke_historical_lambda(symbol)
                     st.session_state[f"fetching_{comm_id}"] = True
             st.toast("Bear with us while we fetch the data...", icon="⏳")
-
-        # Get price range for slider
-        price_min = float(market_df['price'].min())
-        price_max = float(market_df['price'].max())
-        price_padding = (price_max - price_min) * 0.1  # 10% padding
 
         # Filter data to selected time range for high/low calculation
         filtered_df = market_df[market_df['recorded_at'] >= min_time]
@@ -264,8 +257,6 @@ def build_combined_graph(df: pd.DataFrame, market_df: pd.DataFrame):
 
         # Fetch historical data if needed (only for non-default commodities)
         if requested_min_time < data_min_time:
-            from query_data import get_connection
-            from os import environ as ENV
             needs_fetch = False
             for comm_id in chart_df['commodity_id'].unique():
                 if int(comm_id) not in DEFAULT_COMMODITY_IDS:
@@ -279,11 +270,6 @@ def build_combined_graph(df: pd.DataFrame, market_df: pd.DataFrame):
                             needs_fetch = True
             if needs_fetch:
                 st.toast("Bear with us while we fetch the data...", icon="⏳")
-
-        # Get price range for slider (across all commodities)
-        price_min = float(chart_df['price'].min())
-        price_max = float(chart_df['price'].max())
-        price_padding = (price_max - price_min) * 0.1  # 10% padding
 
         # Filter data to selected time range for high/low calculation
         filtered_df = chart_df[chart_df['recorded_at'] >= min_time]
@@ -355,7 +341,11 @@ def build_combined_graph(df: pd.DataFrame, market_df: pd.DataFrame):
                 y=alt.Y('price:Q', title='Price ($)',
                         scale=alt.Scale(domain=[y_min, y_max])),
                 color=alt.Color('commodity_name:N', title='Commodity',
-                                scale=alt.Scale(range=['#03c1ff', '#e6530c', '#22c55e', '#8b5cf6', '#f59e0b'])),
+                                scale=alt.Scale(range=['#03c1ff',
+                                                       '#e6530c',
+                                                       '#22c55e',
+                                                       '#8b5cf6',
+                                                       '#f59e0b'])),
                 tooltip=[
                     alt.Tooltip('commodity_name:N', title='Commodity'),
                     alt.Tooltip('recorded_at:T', title='Date',
@@ -399,8 +389,10 @@ def build_combined_metrics(df: pd.DataFrame, market_df: pd.DataFrame):
                     <p style="color: #1e293b; font-weight: 600; margin: 0 0 5px 0;">{comm_name}</p>
                     <p style="color: #03c1ff; font-size: 20px; font-weight: 700; margin: 0;">
                         ${latest['price']:.2f}
-                        <span style="font-size: 14px; color: {'#22c55e' if latest['change_percentage'] >= 0 else '#ef4444'};">
-                            {'+' if latest['change_percentage'] >= 0 else ''}{latest['change_percentage']:.2f}%
+                        <span style="font-size: 14px; 
+                            color: {'#22c55e' if latest['change_percentage'] >= 0 else '#ef4444'};">
+                            {'+' if latest['change_percentage'] >= 0 else ''}
+                            {latest['change_percentage']:.2f}%
                         </span>
                     </p>
                 </div>
@@ -454,7 +446,10 @@ def page_redirect(msg: str, page: str, alignment: str = "center"):
             st.switch_page(page)
 
 
-def display_markdown_title(title: str, alignment: str = "center", size: int = 21, weight: int = 600):
+def display_markdown_title(title: str,
+                           alignment: str = "center",
+                           size: int = 21,
+                           weight: int = 600):
     """Display page title."""
     st.markdown(f"""
             <div style='text-align: {alignment}; font-size: {size}px; font-weight: {weight};'>

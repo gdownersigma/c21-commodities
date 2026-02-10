@@ -1,13 +1,13 @@
 """Page for editing user details."""
 
-# pylint: disable=import-error
+# pylint: disable=relative-beyond-top-level
 
 from os import environ as ENV
 import streamlit as st
 
-from menu import menu
-from query_data import get_connection
-from dashboard_items import build_form
+from ..menu import menu
+from ..query_data import get_connection
+from ..dashboard_items import build_form
 
 st.set_page_config(
     layout="centered"
@@ -25,7 +25,7 @@ def handle_edit_account(conn, field_input):
     # Update all details regardless of change
     # Or update only changed details
 
-    if False:  # Placeholder for change detection logic
+    if False:
         st.error(
             "No details have been changed. Please update at least one field to save changes.")
     else:
@@ -50,10 +50,10 @@ if __name__ == "__main__":
 
     st.header("Edit Account", text_alignment="center")
 
-    conn = get_connection(ENV)
+    connection = get_connection(ENV)
 
     build_form(
-        conn=conn,
+        conn=connection,
         field_labels={
             "name": "default",
             "email": "default",
@@ -70,4 +70,4 @@ if __name__ == "__main__":
         on_cancel=handle_cancel
     )
 
-    conn.close()
+    connection.close()

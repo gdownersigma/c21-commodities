@@ -2,8 +2,8 @@
 
 # pylint: disable=no-member
 
-import json
 from os import _Environ, environ as ENV
+import json
 
 import boto3
 import streamlit as st

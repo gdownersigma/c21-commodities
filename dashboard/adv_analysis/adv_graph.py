@@ -1,15 +1,15 @@
 """Advanced Technical Analysis Graph Module for Commodity Data."""
 
+from os import environ as ENV
 import streamlit as st
 import pandas as pd
-from os import environ as ENV
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from query_data import (get_connection,
-                        fetch_data,
-                        update_user_commodities,
-                        get_commodities_with_user_subscriptions)
+from ..query_data import (get_connection,
+                          fetch_data,
+                          update_user_commodities,
+                          get_commodities_with_user_subscriptions)
 
 
 # ==================== CONSTANTS ====================
@@ -115,7 +115,7 @@ def add_moving_average_traces(fig: go.Figure, df: pd.DataFrame) -> None:
                 y=df[col],
                 mode='lines',
                 name=name,
-                line=dict(color=color, width=1.5)
+                line={"color": color, "width": 1.5}
             ),
             row=1, col=1
         )
@@ -149,13 +149,13 @@ def configure_layout(fig: go.Figure) -> None:
         xaxis_rangeslider_visible=False,
         height=700,
         hovermode='x unified',
-        legend=dict(
-            orientation='h',
-            yanchor='bottom',
-            y=1.02,
-            xanchor='left',
-            x=0
-        )
+        legend={
+            "orientation": 'h',
+            "yanchor": 'bottom',
+            "y": 1.02,
+            "xanchor": 'left',
+            "x": 0
+        }
     )
     fig.update_yaxes(title_text="Price", row=1, col=1)
 
@@ -313,7 +313,7 @@ def adv_graph(commodity_id: int = None):
         commodity_id = st.session_state.get('analysis_commodity_id')
         if commodity_id is None:
             st.error("No commodity selected for analysis.")
-            return None
+            return
 
     conn = get_connection(ENV)
     df = fetch_data(conn, commodity_id)
@@ -321,7 +321,7 @@ def adv_graph(commodity_id: int = None):
 
     if df.empty:
         st.error("No data found for the selected commodity.")
-        return None
+        return
 
     df_daily = prepare_daily_data(df)
     df_daily = calculate_moving_averages(df_daily)

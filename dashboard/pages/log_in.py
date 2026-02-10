@@ -1,18 +1,18 @@
 """Page for user log in."""
 
-# pylint: disable=import-error
+# pylint: disable=relative-beyond-top-level
 
 from os import environ as ENV
 import streamlit as st
 
-from menu import menu
-from query_data import get_connection
-from dashboard_items import (build_form,
-                             page_redirect)
-from helper_functions import (fill_user_commodities,
-                              decrypt_and_verify)
-from query_data import (get_password_by_email,
-                        get_user_by_email)
+from ..menu import menu
+from ..query_data import (get_connection,
+                          get_password_by_email,
+                          get_user_by_email)
+from ..dashboard_items import (build_form,
+                               page_redirect)
+from ..helper_functions import (fill_user_commodities,
+                                decrypt_and_verify)
 
 st.set_page_config(
     layout="centered"
@@ -68,10 +68,10 @@ if __name__ == "__main__":
 
     st.header("Log In", text_alignment="center")
 
-    conn = get_connection(ENV)
+    connection = get_connection(ENV)
 
     build_form(
-        conn=conn,
+        conn=connection,
         field_labels={
             "email": "default",
             "password": "password",
@@ -83,7 +83,7 @@ if __name__ == "__main__":
         on_cancel=handle_cancel
     )
 
-    conn.close()
+    connection.close()
 
     page_redirect("Don't have an account? Sign up",
                   "pages/sign_up.py")
