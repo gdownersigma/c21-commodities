@@ -1,15 +1,15 @@
 """Commodity News Analysis - Real-time news tracking for commodity markets."""
 
-import html
 import json
-import streamlit as st
 from datetime import datetime
+from os import environ as ENV
 from pathlib import Path
+
 import pandas as pd
 import requests
-from requests.exceptions import RequestException
-from os import environ as ENV
+import streamlit as st
 from dotenv import load_dotenv
+from requests.exceptions import RequestException
 
 from config import COMMODITIES, TAG_KEYWORDS, TAG_COLORS, COMMODITY_BADGES
 
@@ -184,23 +184,19 @@ def render_news_card(article: dict):
                 f'<span class="commodity-badge {COMMODITY_BADGES.get(c, "badge-general")}">{c}</span>' for c in commodities[:2])
             st.markdown(
                 f"<div style='text-align: right;'>{badges}</div>", unsafe_allow_html=True)
-        safe_title = html.escape(article['title'])
-        safe_description = html.escape(article['description'])
-        safe_source = html.escape(article['source'])
-
-        # Only allow http/https URLs to prevent javascript:/data: attacks
         raw_url = article['url']
-        if raw_url.lower().startswith(('http://', 'https://')):
-            safe_url = html.escape(raw_url)
-            link_html = f'<a href="{safe_url}" target="_blank">Read more →</a>'
-        else:
-            link_html = '<span style="color: #94a3b8;">(link unavailable)</span>'
+        safe_link = raw_url if raw_url.lower().startswith(
+            ('http://', 'https://')) else '#'
+
+        # Escape markdown special characters in title to prevent unwanted formatting
+        title = article['title']
+        for char in ['`', '*', '_', '[', ']', '#']:
+            title = title.replace(char, f'\\{char}')
 
         # Use Streamlit's native text rendering for proper theme support
-        st.markdown(f"**📰 {safe_title}**")
-        st.markdown(safe_description)
-        st.caption(
-            f"Source: {safe_source} | [Read more →]({raw_url if raw_url.lower().startswith(('http://', 'https://')) else '#'})")
+        st.markdown(f"**📰 {title}**")
+        st.text(article['description'])  # st.text doesn't interpret markdown
+        st.caption(f"Source: {article['source']} | [Read more →]({safe_link})")
         st.markdown(
             f"<div style='margin-bottom: 10px;'>🏷️ {render_tags(article['tags'])}</div>", unsafe_allow_html=True)
 
@@ -254,7 +250,7 @@ def render_prices_tab():
     st.caption("Prices provided by Financial Modeling Prep API.")
 
 
-def render_statistics_tab(processed_news: list, filtered_news: list):
+def render_statistics_tab(processed_news: list):
     """Render the Statistics tab."""
     st.subheader("📊 Overall News Statistics")
     if not processed_news:
@@ -332,7 +328,7 @@ def main():
     with tab2:
         render_prices_tab()
     with tab3:
-        render_statistics_tab(processed_news, filtered_news)
+        render_statistics_tab(processed_news)
     render_footer()
 
 
