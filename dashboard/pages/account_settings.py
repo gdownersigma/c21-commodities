@@ -12,6 +12,8 @@ st.set_page_config(
     layout="wide"
 )
 
+st.session_state.last_page = "account_settings"
+
 if __name__ == "__main__":
 
     menu_with_redirect()

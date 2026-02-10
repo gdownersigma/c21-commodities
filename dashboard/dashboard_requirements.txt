@@ -9,3 +9,4 @@ bcrypt
 cryptography
 boto3
 requests
+plotly

@@ -20,6 +20,9 @@ st.set_page_config(
     layout="wide"
 )
 
+if "last_page" not in st.session_state:
+    st.session_state.last_page = "dashboard"
+
 if "user" not in st.session_state:
     st.session_state.user = {}
 
@@ -38,6 +41,14 @@ if "subscribed_commodities" not in st.session_state:
 
 if "user_commodities" not in st.session_state:
     st.session_state.user_commodities = {}
+
+if "analysis_commodity_id" not in st.session_state:
+    st.session_state.analysis_commodity_id = -1
+
+if st.session_state.user and st.session_state.last_page != "dashboard":
+    st.session_state.selected_commodities = {}
+    st.session_state.num_commodities = 1
+    st.session_state.last_page = "dashboard"
 
 
 def build_sidebar(df: pd.DataFrame):
@@ -64,13 +75,13 @@ def build_sidebar(df: pd.DataFrame):
                       disabled=(st.session_state.num_commodities >= min(
                           len(st.session_state.subscribed_commodities), 10)
                       ),
-                      use_container_width=True,
+                      width='stretch',
                       key="add_commodity_btn")
         with col2:
             st.button("➖ Remove",
                       on_click=remove_commodity,
                       disabled=(st.session_state.num_commodities <= 1),
-                      use_container_width=True,
+                      width='stretch',
                       key="remove_commodity_btn")
 
 
@@ -86,7 +97,8 @@ def display_key_metrics(df: pd.DataFrame, conn):
         # Get the latest record for each commodity
         latest_per_commodity = market_df.sort_values(
             'recorded_at').groupby('commodity_id').last()
-        avg_change = latest_per_commodity['change_percentage'].mean(skipna=True)
+        avg_change = latest_per_commodity['change_percentage'].mean(
+            skipna=True)
         if pd.isna(avg_change):
             avg_change = 0.0
     else:
@@ -172,7 +184,7 @@ if __name__ == "__main__":
     if st.session_state.user:
         display_key_metrics(df, conn)
 
-        if st.session_state.num_commodities > 1:
+        if len(st.session_state.subscribed_commodities) > 1:
             display_combined_graph(df, conn)
 
     display_individual_graphs(df, conn)
