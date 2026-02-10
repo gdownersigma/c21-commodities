@@ -13,7 +13,7 @@ load_dotenv()
 # CONFIGURATION
 # =============================================================================
 
-FMP_API_KEY = ENV.get("FMP_API_KEY", "ulaZuPveSkWZcYXofAstmGQd2PJ8nigi")
+FMP_API_KEY = ENV.get("FMP_API_KEY")
 
 COMMODITIES = {
     'Gold': {
