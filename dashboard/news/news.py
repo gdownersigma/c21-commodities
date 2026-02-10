@@ -196,15 +196,13 @@ def render_news_card(article: dict):
         else:
             link_html = '<span style="color: #94a3b8;">(link unavailable)</span>'
 
-        st.markdown(f"""
-            <div class="timeline-event news-event">
-                <div class="news-title">📰 {safe_title}</div>
-                <div class="news-description">{safe_description}</div>
-                <div class="news-source">Source: {safe_source} | {link_html}</div>
-            </div>
-        """, unsafe_allow_html=True)
+        # Use Streamlit's native text rendering for proper theme support
+        st.markdown(f"**📰 {safe_title}**")
+        st.markdown(safe_description)
+        st.caption(
+            f"Source: {safe_source} | [Read more →]({raw_url if raw_url.lower().startswith(('http://', 'https://')) else '#'})")
         st.markdown(
-            f"<div>🏷️ {render_tags(article['tags'])}</div>", unsafe_allow_html=True)
+            f"<div style='margin-bottom: 10px;'>🏷️ {render_tags(article['tags'])}</div>", unsafe_allow_html=True)
 
 
 def render_sidebar() -> tuple:

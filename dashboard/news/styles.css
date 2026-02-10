@@ -7,37 +7,37 @@
     padding: 15px 20px; 
     margin: 10px 0; 
     border-radius: 10px; 
-    background: #ffffff !important; 
+    background: #ffffff; 
     box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
 }
 .news-event { border-left: 4px solid #3b82f6; }
 
-/* News card content - Force dark text in light mode */
+/* News card content - Light mode text */
 .news-title,
 .timeline-event .news-title,
 div.timeline-event .news-title { 
-    font-size: 18px !important; 
-    font-weight: 700 !important; 
-    color: #0f172a !important; 
-    margin-bottom: 8px !important; 
+    font-size: 18px; 
+    font-weight: 700; 
+    color: #0f172a; 
+    margin-bottom: 8px; 
 }
 .news-description,
 .timeline-event .news-description,
 div.timeline-event .news-description { 
-    color: #334155 !important; 
-    font-size: 14px !important; 
-    line-height: 1.6 !important; 
-    margin-bottom: 12px !important; 
+    color: #334155; 
+    font-size: 14px; 
+    line-height: 1.6; 
+    margin-bottom: 12px; 
 }
 .news-source,
 .timeline-event .news-source,
 div.timeline-event .news-source { 
-    font-size: 12px !important; 
-    color: #475569 !important; 
+    font-size: 12px; 
+    color: #475569; 
 }
 .news-source a,
 .timeline-event .news-source a { 
-    color: #2563eb !important; 
+    color: #2563eb; 
 }
 
 /* Tags */
@@ -61,37 +61,8 @@ div.timeline-event .news-source {
 .badge-general { background: #e0e7ff !important; color: #3730a3 !important; }
 
 /* =============================================================================
-   DARK MODE
+   DARK MODE (Streamlit theme detection only)
    ============================================================================= */
-
-@media (prefers-color-scheme: dark) {
-    .timeline-event { 
-        background: #1e293b; 
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3); 
-    }
-    .news-title { color: #f1f5f9 !important; }
-    .news-description { color: #94a3b8 !important; }
-    .news-source { color: #64748b !important; }
-    .news-source a { color: #60a5fa !important; }
-    
-    /* Tags - slightly muted for dark mode */
-    .tag-supply { background: #78350f !important; color: #fef3c7 !important; }
-    .tag-demand { background: #1e3a5f !important; color: #bfdbfe !important; }
-    .tag-policy { background: #4c1d95 !important; color: #e9d5ff !important; }
-    .tag-weather { background: #14532d !important; color: #bbf7d0 !important; }
-    .tag-geopolitical { background: #7f1d1d !important; color: #fecaca !important; }
-    .tag-market { background: #312e81 !important; color: #c7d2fe !important; }
-    .tag-currency { background: #831843 !important; color: #fbcfe8 !important; }
-    .tag-default { background: #334155 !important; color: #e2e8f0 !important; }
-    
-    /* Commodity badges - inverted for dark mode */
-    .badge-gold { background: #78350f !important; color: #fef3c7 !important; }
-    .badge-silver { background: #374151 !important; color: #e5e7eb !important; }
-    .badge-copper { background: #7c2d12 !important; color: #fed7aa !important; }
-    .badge-wheat { background: #713f12 !important; color: #fef9c3 !important; }
-    .badge-oats { background: #365314 !important; color: #ecfccb !important; }
-    .badge-general { background: #312e81 !important; color: #e0e7ff !important; }
-}
 
 /* Streamlit dark theme detection */
 [data-theme="dark"] .timeline-event {
@@ -113,6 +84,9 @@ div.timeline-event .news-source {
 [data-theme="dark"] .badge-gold { background: #78350f !important; color: #fef3c7 !important; }
 [data-theme="dark"] .badge-silver { background: #374151 !important; color: #e5e7eb !important; }
 [data-theme="dark"] .badge-copper { background: #7c2d12 !important; color: #fed7aa !important; }
+[data-theme="dark"] .badge-wheat { background: #713f12 !important; color: #fef9c3 !important; }
+[data-theme="dark"] .badge-oats { background: #365314 !important; color: #ecfccb !important; }
+[data-theme="dark"] .badge-general { background: #312e81 !important; color: #e0e7ff !important; }
 [data-theme="dark"] .badge-wheat { background: #713f12 !important; color: #fef9c3 !important; }
 [data-theme="dark"] .badge-oats { background: #365314 !important; color: #ecfccb !important; }
 [data-theme="dark"] .badge-general { background: #312e81 !important; color: #e0e7ff !important; }
