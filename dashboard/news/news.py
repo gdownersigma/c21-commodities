@@ -371,6 +371,11 @@ def main():
                        page_icon="📊", layout="wide")
     st.markdown(CSS_STYLES, unsafe_allow_html=True)
     st.title("📊 Commodity News Analysis")
+
+    if not FMP_API_KEY:
+        st.error("⚠️ FMP_API_KEY not configured. Please set it in your .env file.")
+        st.stop()
+
     st.markdown(
         "Real-time news tracking for **Gold**, **Silver**, **Copper**, **Wheat**, and **Oats**.")
     st.divider()
