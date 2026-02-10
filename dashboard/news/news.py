@@ -1,7 +1,6 @@
 """Commodity News Analysis - Real-time news tracking for commodity markets."""
 
 import html
-import json
 from datetime import datetime
 from os import environ as ENV
 from pathlib import Path
@@ -43,8 +42,11 @@ def fetch_general_news(limit: int = 100) -> list:
     params = {"page": 0, "limit": limit, "apikey": FMP_API_KEY}
     try:
         response = requests.get(url, params=params, timeout=10)
-        return response.json() if response.status_code == 200 else []
-    except (RequestException, json.JSONDecodeError):
+        if response.status_code != 200:
+            return []
+        data = response.json()
+        return data if isinstance(data, list) else []
+    except (RequestException, ValueError):
         return []  # Network or JSON parsing error, return empty list
 
 
@@ -56,8 +58,11 @@ def fetch_stock_news(symbols: list, limit: int = 50) -> list:
         symbols), "limit": limit, "apikey": FMP_API_KEY}
     try:
         response = requests.get(url, params=params, timeout=10)
-        return response.json() if response.status_code == 200 else []
-    except (RequestException, json.JSONDecodeError):
+        if response.status_code != 200:
+            return []
+        data = response.json()
+        return data if isinstance(data, list) else []
+    except (RequestException, ValueError):
         return []  # Network or JSON parsing error, return empty list
 
 
@@ -71,8 +76,11 @@ def fetch_commodity_prices() -> dict:
             url, params={"apikey": FMP_API_KEY}, timeout=10)
         if response.status_code != 200:
             return {}
+        data = response.json()
+        if not isinstance(data, list):
+            return {}
         prices = {}
-        for item in response.json():
+        for item in data:
             symbol = item.get("symbol", "")
             if symbol in symbol_map:
                 prices[symbol_map[symbol]] = {
@@ -81,7 +89,7 @@ def fetch_commodity_prices() -> dict:
                     "changesPercentage": item.get("changesPercentage", 0)
                 }
         return prices
-    except (RequestException, json.JSONDecodeError):
+    except (RequestException, ValueError):
         return {}  # Network or JSON parsing error, return empty dict
 
 
