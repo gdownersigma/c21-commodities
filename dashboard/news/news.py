@@ -13,13 +13,9 @@ from requests.exceptions import RequestException
 
 from config import COMMODITIES, TAG_KEYWORDS, TAG_COLORS, COMMODITY_BADGES
 
-load_dotenv()
-
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
-
-FMP_API_KEY = ENV.get("FMP_API_KEY")
 
 # Load CSS from external file
 CSS_FILE = Path(__file__).parent / "styles.css"
@@ -36,10 +32,10 @@ def load_css() -> str:
 # =============================================================================
 
 @st.cache_data(ttl=300)
-def fetch_general_news(limit: int = 100) -> list:
+def fetch_general_news(api_key: str, limit: int = 100) -> list:
     """Fetch general news from FMP API."""
     url = "https://financialmodelingprep.com/stable/news/general-latest"
-    params = {"page": 0, "limit": limit, "apikey": FMP_API_KEY}
+    params = {"page": 0, "limit": limit, "apikey": api_key}
     try:
         response = requests.get(url, params=params, timeout=10)
         if response.status_code != 200:
@@ -51,11 +47,11 @@ def fetch_general_news(limit: int = 100) -> list:
 
 
 @st.cache_data(ttl=300)
-def fetch_stock_news(symbols: list, limit: int = 50) -> list:
+def fetch_stock_news(api_key: str, symbols: list, limit: int = 50) -> list:
     """Fetch stock news for specific symbols (ETFs)."""
     url = "https://financialmodelingprep.com/stable/news/stock"
     params = {"symbols": ",".join(
-        symbols), "limit": limit, "apikey": FMP_API_KEY}
+        symbols), "limit": limit, "apikey": api_key}
     try:
         response = requests.get(url, params=params, timeout=10)
         if response.status_code != 200:
@@ -67,13 +63,13 @@ def fetch_stock_news(symbols: list, limit: int = 50) -> list:
 
 
 @st.cache_data(ttl=60)
-def fetch_commodity_prices() -> dict:
+def fetch_commodity_prices(api_key: str) -> dict:
     """Fetch current commodity prices."""
     url = "https://financialmodelingprep.com/stable/batch-commodity-quotes"
     symbol_map = {cfg["symbol"]: name for name, cfg in COMMODITIES.items()}
     try:
         response = requests.get(
-            url, params={"apikey": FMP_API_KEY}, timeout=10)
+            url, params={"apikey": api_key}, timeout=10)
         if response.status_code != 200:
             return {}
         data = response.json()
@@ -252,11 +248,11 @@ def render_news_feed_tab(filtered_news: list):
             render_news_card(article)
 
 
-def render_prices_tab():
+def render_prices_tab(api_key: str):
     """Render the Commodity Prices tab."""
     st.subheader("💰 Live Commodity Prices")
     with st.spinner("Fetching prices..."):
-        prices = fetch_commodity_prices()
+        prices = fetch_commodity_prices(api_key)
     if prices:
         cols = st.columns(len(prices))
         for col, (name, data) in zip(cols, prices.items()):
@@ -320,12 +316,15 @@ def render_footer():
 
 def main():
     """Main application entry point."""
+    load_dotenv()
+    fmp_api_key = ENV.get("FMP_API_KEY")
+
     st.set_page_config(page_title="Commodity News Analysis",
                        page_icon="📊", layout="wide")
     st.markdown(load_css(), unsafe_allow_html=True)
     st.title("📊 Commodity News Analysis")
 
-    if not FMP_API_KEY:
+    if not fmp_api_key:
         st.error("⚠️ FMP_API_KEY not configured. Please set it in your .env file.")
         st.stop()
 
@@ -337,7 +336,7 @@ def main():
         all_etf_symbols = [s for cfg in COMMODITIES.values()
                            for s in cfg["etf_symbols"]]
         raw_news = deduplicate_news(fetch_general_news(
-            100) + fetch_stock_news(all_etf_symbols, 50))
+            fmp_api_key, 100) + fetch_stock_news(fmp_api_key, all_etf_symbols, 50))
         processed_news = process_news_data(raw_news)
         filtered_news = filter_news(
             processed_news, selected_commodity, selected_tags)
@@ -346,7 +345,7 @@ def main():
     with tab1:
         render_news_feed_tab(filtered_news)
     with tab2:
-        render_prices_tab()
+        render_prices_tab(fmp_api_key)
     with tab3:
         render_statistics_tab(processed_news)
     render_footer()
