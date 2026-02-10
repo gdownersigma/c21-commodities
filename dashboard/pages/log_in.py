@@ -1,17 +1,17 @@
 """Page for user log in."""
 
-# pylint: disable=relative-beyond-top-level
+# pylint: disable=import-error
 
 from os import environ as ENV
 import streamlit as st
 
-from ..menu import menu
-from ..query_data import (get_connection,
+from menu import menu
+from query_data import (get_connection,
                           get_password_by_email,
                           get_user_by_email)
-from ..dashboard_items import (build_form,
+from dashboard_items import (build_form,
                                page_redirect)
-from ..helper_functions import (fill_user_commodities,
+from helper_functions import (fill_user_commodities,
                                 decrypt_and_verify)
 
 st.set_page_config(

@@ -391,8 +391,7 @@ def build_combined_metrics(df: pd.DataFrame, market_df: pd.DataFrame):
                         ${latest['price']:.2f}
                         <span style="font-size: 14px; 
                             color: {'#22c55e' if latest['change_percentage'] >= 0 else '#ef4444'};">
-                            {'+' if latest['change_percentage'] >= 0 else ''}
-                            {latest['change_percentage']:.2f}%
+                            {'+' if latest['change_percentage'] >= 0 else ''}{latest['change_percentage']:.2f}%
                         </span>
                     </p>
                 </div>

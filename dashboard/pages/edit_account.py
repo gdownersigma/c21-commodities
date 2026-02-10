@@ -1,13 +1,13 @@
 """Page for editing user details."""
 
-# pylint: disable=relative-beyond-top-level
+# pylint: disable=import-error
 
 from os import environ as ENV
 import streamlit as st
 
-from ..menu import menu
-from ..query_data import get_connection
-from ..dashboard_items import build_form
+from menu import menu
+from query_data import get_connection
+from dashboard_items import build_form
 
 st.set_page_config(
     layout="centered"

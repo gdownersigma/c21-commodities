@@ -1,11 +1,11 @@
 """Page for user account settings."""
 
-# pylint: disable=relative-beyond-top-level
+# pylint: disable=import-error
 
 import streamlit as st
 
-from ..menu import menu_with_redirect
-from ..dashboard_items import page_redirect
+from menu import menu_with_redirect
+from dashboard_items import page_redirect
 
 st.set_page_config(
     layout="wide"

@@ -1,15 +1,17 @@
 """Advanced Technical Analysis Graph Module for Commodity Data."""
 
+# pylint: disable=import-error
+
 from os import environ as ENV
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from ..query_data import (get_connection,
-                          fetch_data,
-                          update_user_commodities,
-                          get_commodities_with_user_subscriptions)
+from query_data import (get_connection,
+                        fetch_data,
+                        update_user_commodities,
+                        get_commodities_with_user_subscriptions)
 
 
 # ==================== CONSTANTS ====================
