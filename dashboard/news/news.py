@@ -182,8 +182,8 @@ def parse_date(published_date: str) -> tuple:
         if published_date:
             dt = datetime.fromisoformat(published_date.replace("Z", "+00:00"))
             return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
-    except Exception:
-        pass
+    except ValueError:
+        pass  # Invalid date format, fall back to current time
     now = datetime.now()
     return now.strftime("%Y-%m-%d"), now.strftime("%H:%M")
 
