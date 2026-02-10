@@ -7,12 +7,12 @@ import streamlit as st
 
 from menu import menu
 from query_data import (get_connection,
-                          get_password_by_email,
-                          get_user_by_email)
+                        get_password_by_email,
+                        get_user_by_email)
 from dashboard_items import (build_form,
-                               page_redirect)
+                             page_redirect)
 from helper_functions import (fill_user_commodities,
-                                decrypt_and_verify)
+                              decrypt_and_verify)
 
 st.set_page_config(
     layout="centered"
