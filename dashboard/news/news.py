@@ -1,9 +1,11 @@
 """Commodity News Analysis - Real-time news tracking for commodity markets."""
 
+import html
 import streamlit as st
 from datetime import datetime
 import pandas as pd
 import requests
+from requests.exceptions import RequestException
 from os import environ as ENV
 from dotenv import load_dotenv
 
@@ -110,8 +112,8 @@ def fetch_general_news(limit: int = 100) -> list:
     try:
         response = requests.get(url, params=params, timeout=10)
         return response.json() if response.status_code == 200 else []
-    except Exception:
-        return []
+    except RequestException:
+        return []  # Network error, return empty list
 
 
 @st.cache_data(ttl=300)
@@ -123,8 +125,8 @@ def fetch_stock_news(symbols: list, limit: int = 50) -> list:
     try:
         response = requests.get(url, params=params, timeout=10)
         return response.json() if response.status_code == 200 else []
-    except Exception:
-        return []
+    except RequestException:
+        return []  # Network error, return empty list
 
 
 @st.cache_data(ttl=60)
@@ -147,8 +149,8 @@ def fetch_commodity_prices() -> dict:
                     "changesPercentage": item.get("changesPercentage", 0)
                 }
         return prices
-    except Exception:
-        return {}
+    except RequestException:
+        return {}  # Network error, return empty dict
 
 
 # =============================================================================
@@ -251,11 +253,15 @@ def render_news_card(article: dict):
                 f'<span class="commodity-badge {COMMODITY_BADGES.get(c, "badge-general")}">{c}</span>' for c in commodities[:2])
             st.markdown(
                 f"<div style='text-align: right;'>{badges}</div>", unsafe_allow_html=True)
+        safe_title = html.escape(article['title'])
+        safe_description = html.escape(article['description'])
+        safe_source = html.escape(article['source'])
+        safe_url = html.escape(article['url'])
         st.markdown(f"""
             <div class="timeline-event news-event">
-                <div style="font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">📰 {article['title']}</div>
-                <div style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 12px;">{article['description']}</div>
-                <div style="font-size: 12px; color: #94a3b8;">Source: {article['source']} | <a href="{article['url']}" target="_blank">Read more →</a></div>
+                <div style="font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">📰 {safe_title}</div>
+                <div style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 12px;">{safe_description}</div>
+                <div style="font-size: 12px; color: #94a3b8;">Source: {safe_source} | <a href="{safe_url}" target="_blank">Read more →</a></div>
             </div>
         """, unsafe_allow_html=True)
         st.markdown(
