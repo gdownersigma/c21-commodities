@@ -1,5 +1,6 @@
 """Commodity News Analysis - Real-time news tracking for commodity markets."""
 
+import html
 import json
 from datetime import datetime
 from os import environ as ENV
@@ -106,7 +107,7 @@ def auto_tag_article(text: str) -> list:
 
 def render_tags(tags: list) -> str:
     """Render tags as HTML."""
-    return " ".join(f'<span class="tag {TAG_COLORS.get(tag, "tag-default")}">{tag}</span>' for tag in tags)
+    return " ".join(f'<span class="tag {TAG_COLORS.get(tag, "tag-default")}">{html.escape(tag)}</span>' for tag in tags)
 
 
 def parse_date(published_date: str) -> tuple:
@@ -125,8 +126,8 @@ def process_news_data(news_items: list) -> list:
     """Process raw news data into structured format."""
     processed = []
     for idx, item in enumerate(news_items):
-        title = item.get("title", "")
-        text = item.get("text", item.get("content", ""))
+        title = item.get("title") or ""
+        text = item.get("text") or item.get("content") or ""
         full_text = f"{title} {text}"
         date_str, time_str = parse_date(item.get("publishedDate", ""))
         processed.append({
@@ -137,8 +138,8 @@ def process_news_data(news_items: list) -> list:
             "description": text[:500] + "..." if len(text) > 500 else text,
             "commodities": identify_commodity(full_text),
             "tags": auto_tag_article(full_text),
-            "source": item.get("site", item.get("source", "News")),
-            "url": item.get("url", "#"),
+            "source": item.get("site") or item.get("source") or "News",
+            "url": item.get("url") or "#",
         })
     return processed
 
@@ -149,10 +150,19 @@ def deduplicate_news(news_items: list) -> list:
     for item in news_items:
         url = item.get("url", "")
         title = item.get("title", "").lower().strip()
-        if url and url not in seen_urls and title not in seen_titles:
+
+        # Skip if URL already seen
+        if url and url in seen_urls:
+            continue
+        # Skip if non-empty title already seen
+        if title and title in seen_titles:
+            continue
+
+        if url:
             seen_urls.add(url)
+        if title:
             seen_titles.add(title)
-            unique.append(item)
+        unique.append(item)
     return unique
 
 
@@ -196,7 +206,9 @@ def render_news_card(article: dict):
         # Use Streamlit's native text rendering for proper theme support
         st.markdown(f"**📰 {title}**")
         st.text(article['description'])  # st.text doesn't interpret markdown
-        st.caption(f"Source: {article['source']} | [Read more →]({safe_link})")
+        st.markdown(
+            f"Source: {article['source']} | <a href=\"{safe_link}\" target=\"_blank\" rel=\"noopener noreferrer\">Read more →</a>",
+            unsafe_allow_html=True)
         st.markdown(
             f"<div style='margin-bottom: 10px;'>🏷️ {render_tags(article['tags'])}</div>", unsafe_allow_html=True)
 

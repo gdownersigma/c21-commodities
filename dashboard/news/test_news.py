@@ -1,8 +1,5 @@
 """Unit tests for news.py helper functions."""
 
-import pytest
-from datetime import datetime
-
 from news import (
     identify_commodity,
     auto_tag_article,
@@ -11,6 +8,14 @@ from news import (
     filter_news,
     render_tags,
 )
+import sys
+from pathlib import Path
+
+import pytest
+from datetime import datetime
+
+# Add the news directory to path for imports to work from any location
+sys.path.insert(0, str(Path(__file__).parent))
 
 
 # =============================================================================
