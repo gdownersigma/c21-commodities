@@ -3,6 +3,7 @@
 import html
 import streamlit as st
 from datetime import datetime
+from pathlib import Path
 import pandas as pd
 import requests
 from requests.exceptions import RequestException
@@ -16,6 +17,16 @@ load_dotenv()
 # =============================================================================
 
 FMP_API_KEY = ENV.get("FMP_API_KEY")
+
+# Load CSS from external file
+CSS_FILE = Path(__file__).parent / "styles.css"
+
+
+def load_css() -> str:
+    """Load CSS styles from external file."""
+    with open(CSS_FILE, "r") as f:
+        return f"<style>{f.read()}</style>"
+
 
 COMMODITIES = {
     'Gold': {
@@ -70,34 +81,6 @@ COMMODITY_BADGES = {
     'Gold': 'badge-gold', 'Silver': 'badge-silver', 'Copper': 'badge-copper',
     'Wheat': 'badge-wheat', 'Oats': 'badge-oats', 'General': 'badge-general'
 }
-
-CSS_STYLES = """
-<style>
-    .stApp { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); }
-    .stApp, .stApp * { color: #1e293b; }
-    h1, h2, h3, .stTitle, [data-testid="stTitle"] { color: #1e293b !important; }
-    p, span, label, .stMarkdown, .stCaption, [data-testid="stMarkdownContainer"] { color: #334155 !important; }
-    .stRadio label, .stRadio span { color: #334155 !important; }
-    .timeline-event { position: relative; padding: 15px 20px; margin: 10px 0; border-radius: 10px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .news-event { border-left: 4px solid #3b82f6; }
-    .tag { display: inline-block; padding: 4px 10px; margin: 2px; border-radius: 15px; font-size: 12px; font-weight: 500; }
-    .tag-supply { background: #fef3c7; color: #92400e; }
-    .tag-demand { background: #dbeafe; color: #1e40af; }
-    .tag-policy { background: #f3e8ff; color: #7c3aed; }
-    .tag-weather { background: #dcfce7; color: #166534; }
-    .tag-geopolitical { background: #fee2e2; color: #991b1b; }
-    .tag-market { background: #e0e7ff; color: #3730a3; }
-    .tag-currency { background: #fce7f3; color: #9d174d; }
-    .tag-default { background: #f1f5f9; color: #475569; }
-    .commodity-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
-    .badge-gold { background: #fef3c7; color: #b45309; }
-    .badge-silver { background: #e5e7eb; color: #374151; }
-    .badge-copper { background: #fed7aa; color: #c2410c; }
-    .badge-wheat { background: #fef9c3; color: #a16207; }
-    .badge-oats { background: #ecfccb; color: #4d7c0f; }
-    .badge-general { background: #e0e7ff; color: #3730a3; }
-</style>
-"""
 
 
 # =============================================================================
@@ -369,7 +352,7 @@ def main():
     """Main application entry point."""
     st.set_page_config(page_title="Commodity News Analysis",
                        page_icon="📊", layout="wide")
-    st.markdown(CSS_STYLES, unsafe_allow_html=True)
+    st.markdown(load_css(), unsafe_allow_html=True)
     st.title("📊 Commodity News Analysis")
 
     if not FMP_API_KEY:
