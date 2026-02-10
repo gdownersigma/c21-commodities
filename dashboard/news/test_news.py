@@ -9,10 +9,11 @@ from news import (
     render_tags,
 )
 import sys
+from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
-from datetime import datetime
 
 # Add the news directory to path for imports to work from any location
 sys.path.insert(0, str(Path(__file__).parent))
@@ -110,22 +111,28 @@ class TestParseDate:
 
     def test_returns_current_time_for_invalid_date(self):
         """Test fallback to current time for invalid date."""
-        result = parse_date("invalid-date")
-        # Should return today's date
-        today = datetime.now().strftime("%Y-%m-%d")
-        assert result[0] == today
+        mock_now = datetime(2026, 6, 15, 10, 30, 0)
+        with patch('news.datetime') as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.fromisoformat = datetime.fromisoformat
+            result = parse_date("invalid-date")
+        assert result == ("2026-06-15", "10:30")
 
     def test_returns_current_time_for_empty_string(self):
         """Test fallback to current time for empty string."""
-        result = parse_date("")
-        today = datetime.now().strftime("%Y-%m-%d")
-        assert result[0] == today
+        mock_now = datetime(2026, 6, 15, 10, 30, 0)
+        with patch('news.datetime') as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            result = parse_date("")
+        assert result == ("2026-06-15", "10:30")
 
     def test_returns_current_time_for_none(self):
         """Test fallback to current time for None."""
-        result = parse_date(None)
-        today = datetime.now().strftime("%Y-%m-%d")
-        assert result[0] == today
+        mock_now = datetime(2026, 6, 15, 10, 30, 0)
+        with patch('news.datetime') as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            result = parse_date(None)
+        assert result == ("2026-06-15", "10:30")
 
 
 # =============================================================================
