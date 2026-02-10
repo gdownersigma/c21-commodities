@@ -280,7 +280,9 @@ def render_sidebar() -> tuple:
         "Select tags", list(TAG_KEYWORDS.keys()))
     st.sidebar.markdown("---")
     if st.sidebar.button("🔄 Refresh News", use_container_width=True):
-        st.cache_data.clear()
+        fetch_general_news.clear()
+        fetch_stock_news.clear()
+        fetch_commodity_prices.clear()
         st.rerun()
     return selected_commodity, selected_tags
 
