@@ -2,7 +2,6 @@
 
 import pytest
 from datetime import datetime
-from unittest.mock import patch
 
 from news import (
     identify_commodity,
@@ -44,6 +43,11 @@ class TestIdentifyCommodity:
         result = identify_commodity("")
         assert result == ["General"]
 
+    def test_none_input_returns_general(self):
+        """Test None input returns General."""
+        result = identify_commodity(None)
+        assert result == ["General"]
+
 
 # =============================================================================
 # auto_tag_article tests
@@ -75,6 +79,11 @@ class TestAutoTagArticle:
         """Test that tagging is case insensitive."""
         result = auto_tag_article("FEDERAL RESERVE POLICY ANNOUNCEMENT")
         assert "Policy" in result
+
+    def test_none_input_returns_market(self):
+        """Test None input returns Market."""
+        result = auto_tag_article(None)
+        assert result == ["Market"]
 
 
 # =============================================================================

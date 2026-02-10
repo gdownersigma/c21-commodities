@@ -1,6 +1,7 @@
 """Commodity News Analysis - Real-time news tracking for commodity markets."""
 
 import html
+import json
 import streamlit as st
 from datetime import datetime
 from pathlib import Path
@@ -9,6 +10,8 @@ import requests
 from requests.exceptions import RequestException
 from os import environ as ENV
 from dotenv import load_dotenv
+
+from config import COMMODITIES, TAG_KEYWORDS, TAG_COLORS, COMMODITY_BADGES
 
 load_dotenv()
 
@@ -28,61 +31,6 @@ def load_css() -> str:
         return f"<style>{f.read()}</style>"
 
 
-COMMODITIES = {
-    'Gold': {
-        'keywords': ['gold', 'bullion', 'precious metal', 'xau', 'gold price', 'gold futures'],
-        'etf_symbols': ['GLD', 'IAU', 'SGOL'],
-        'symbol': 'GCUSD',
-        'emoji': '🥇'
-    },
-    'Silver': {
-        'keywords': ['silver', 'xag', 'silver price', 'silver futures', 'precious metal'],
-        'etf_symbols': ['SLV', 'SIVR'],
-        'symbol': 'SIUSD',
-        'emoji': '🥈'
-    },
-    'Copper': {
-        'keywords': ['copper', 'copper price', 'copper futures', 'base metal', 'industrial metal'],
-        'etf_symbols': ['CPER', 'JJC'],
-        'symbol': 'HGUSD',
-        'emoji': '🔶'
-    },
-    'Wheat': {
-        'keywords': ['wheat', 'grain', 'wheat futures', 'wheat price', 'agriculture', 'crop'],
-        'etf_symbols': ['WEAT'],
-        'symbol': 'ZWUSD',
-        'emoji': '🌾'
-    },
-    'Oats': {
-        'keywords': ['oats', 'oat futures', 'oat price', 'grain', 'cereal'],
-        'etf_symbols': [],
-        'symbol': 'ZOUSD',
-        'emoji': '🌾'
-    }
-}
-
-TAG_KEYWORDS = {
-    'Supply': ['supply', 'production', 'output', 'mine', 'mining', 'harvest', 'shortage', 'surplus'],
-    'Demand': ['demand', 'consumption', 'import', 'export', 'buying', 'purchase'],
-    'Policy': ['fed', 'federal reserve', 'central bank', 'interest rate', 'policy', 'regulation', 'tariff'],
-    'Weather': ['weather', 'drought', 'flood', 'storm', 'frost', 'climate'],
-    'Geopolitical': ['war', 'conflict', 'sanction', 'trade war', 'tension', 'geopolitical', 'ukraine', 'russia', 'china'],
-    'Market': ['price', 'futures', 'rally', 'decline', 'surge', 'drop', 'market', 'trading', 'investor'],
-    'Currency': ['dollar', 'usd', 'currency', 'forex', 'exchange rate'],
-}
-
-TAG_COLORS = {
-    'Supply': 'tag-supply', 'Demand': 'tag-demand', 'Policy': 'tag-policy',
-    'Weather': 'tag-weather', 'Geopolitical': 'tag-geopolitical',
-    'Market': 'tag-market', 'Currency': 'tag-currency'
-}
-
-COMMODITY_BADGES = {
-    'Gold': 'badge-gold', 'Silver': 'badge-silver', 'Copper': 'badge-copper',
-    'Wheat': 'badge-wheat', 'Oats': 'badge-oats', 'General': 'badge-general'
-}
-
-
 # =============================================================================
 # API FUNCTIONS
 # =============================================================================
@@ -95,8 +43,8 @@ def fetch_general_news(limit: int = 100) -> list:
     try:
         response = requests.get(url, params=params, timeout=10)
         return response.json() if response.status_code == 200 else []
-    except RequestException:
-        return []  # Network error, return empty list
+    except (RequestException, json.JSONDecodeError):
+        return []  # Network or JSON parsing error, return empty list
 
 
 @st.cache_data(ttl=300)
@@ -108,8 +56,8 @@ def fetch_stock_news(symbols: list, limit: int = 50) -> list:
     try:
         response = requests.get(url, params=params, timeout=10)
         return response.json() if response.status_code == 200 else []
-    except RequestException:
-        return []  # Network error, return empty list
+    except (RequestException, json.JSONDecodeError):
+        return []  # Network or JSON parsing error, return empty list
 
 
 @st.cache_data(ttl=60)
@@ -132,8 +80,8 @@ def fetch_commodity_prices() -> dict:
                     "changesPercentage": item.get("changesPercentage", 0)
                 }
         return prices
-    except RequestException:
-        return {}  # Network error, return empty dict
+    except (RequestException, json.JSONDecodeError):
+        return {}  # Network or JSON parsing error, return empty dict
 
 
 # =============================================================================
@@ -142,7 +90,7 @@ def fetch_commodity_prices() -> dict:
 
 def identify_commodity(text: str) -> list:
     """Identify which commodities a news article relates to."""
-    text_lower = text.lower()
+    text_lower = (text or "").lower()
     matched = [name for name, cfg in COMMODITIES.items() if any(
         kw in text_lower for kw in cfg["keywords"])]
     return matched if matched else ["General"]
@@ -150,7 +98,7 @@ def identify_commodity(text: str) -> list:
 
 def auto_tag_article(text: str) -> list:
     """Automatically tag an article based on keywords."""
-    text_lower = text.lower()
+    text_lower = (text or "").lower()
     tags = [tag for tag, keywords in TAG_KEYWORDS.items() if any(
         kw in text_lower for kw in keywords)]
     return tags if tags else ["Market"]
@@ -239,12 +187,20 @@ def render_news_card(article: dict):
         safe_title = html.escape(article['title'])
         safe_description = html.escape(article['description'])
         safe_source = html.escape(article['source'])
-        safe_url = html.escape(article['url'])
+
+        # Only allow http/https URLs to prevent javascript:/data: attacks
+        raw_url = article['url']
+        if raw_url.lower().startswith(('http://', 'https://')):
+            safe_url = html.escape(raw_url)
+            link_html = f'<a href="{safe_url}" target="_blank">Read more →</a>'
+        else:
+            link_html = '<span style="color: #94a3b8;">(link unavailable)</span>'
+
         st.markdown(f"""
             <div class="timeline-event news-event">
-                <div style="font-size: 18px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">📰 {safe_title}</div>
-                <div style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 12px;">{safe_description}</div>
-                <div style="font-size: 12px; color: #94a3b8;">Source: {safe_source} | <a href="{safe_url}" target="_blank">Read more →</a></div>
+                <div class="news-title">📰 {safe_title}</div>
+                <div class="news-description">{safe_description}</div>
+                <div class="news-source">Source: {safe_source} | {link_html}</div>
             </div>
         """, unsafe_allow_html=True)
         st.markdown(
