@@ -82,8 +82,8 @@ def get_user_by_email(_conn: connection, email: str) -> dict:
 
         if data:
             return dict(data)
-        else:
-            return {}
+
+        return {}
 
 
 def get_password_by_email(_conn: connection, email: str):
@@ -142,6 +142,33 @@ def get_commodities_with_user_subscriptions(_conn: connection, user_id: str) -> 
     return new_data
 
 
+def get_commodity_symbol_by_id(_conn: connection, commodity_id: int) -> str:
+    """Return the symbol for a commodity by its ID."""
+
+    query = sql.SQL(load_query("get_commodity_symbol_by_id.sql"))
+
+    with _conn.cursor() as cur:
+        cur.execute(query, (commodity_id,))
+        result = cur.fetchone()
+
+    return result["symbol"] if result else None
+
+
+@st.cache_data(ttl=300)
+def fetch_data(_conn: connection, commodity_id: int) -> pd.DataFrame:
+    """Fetches market data for a commodity using parameterized queries."""
+
+    query = sql.SQL(load_query("fetch_market_data.sql"))
+
+    with _conn.cursor() as cur:
+        cur.execute(query, (commodity_id,))
+
+        rows = cur.fetchall()
+        columns = [desc[0] for desc in cur.description]
+
+    return pd.DataFrame(rows, columns=columns)
+
+
 def create_user(_conn: connection, field_input: dict) -> int:
     """Insert a new user into the database."""
 
@@ -187,18 +214,6 @@ def delete_user_commodities(_conn: connection, user_id: int, comm_ids: list):
     _conn.commit()
 
 
-def get_commodity_symbol_by_id(_conn: connection, commodity_id: int) -> str:
-    """Return the symbol for a commodity by its ID."""
-
-    query = sql.SQL(load_query("get_commodity_symbol_by_id.sql"))
-
-    with _conn.cursor() as cur:
-        cur.execute(query, (commodity_id,))
-        result = cur.fetchone()
-
-    return result["symbol"] if result else None
-
-
 def update_user_commodities(_conn: connection, update_data: list[dict]):
     """Update user commodity prices using separate buy and sell queries."""
 
@@ -236,7 +251,7 @@ if __name__ == "__main__":
     conn = get_connection(ENV)
 
     # data = get_commodities_with_user_subscriptions(conn, 16)
-    data = get_password_by_email(conn, "test4@example.com")
-    print(data)
+    # data = get_password_by_email(conn, "test4@example.com")
+    # print(data)
 
     conn.close()

@@ -2,12 +2,14 @@
 
 # pylint: disable=no-member
 
-import json
 from os import _Environ, environ as ENV
+import json
 
 import boto3
 import streamlit as st
-from bcrypt import hashpw, gensalt, checkpw
+from bcrypt import (hashpw,
+                    gensalt,
+                    checkpw)
 from cryptography.fernet import Fernet
 
 from query_data import get_commodities_with_user_subscriptions

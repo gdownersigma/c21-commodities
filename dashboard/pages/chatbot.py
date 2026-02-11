@@ -2,17 +2,20 @@
 
 # pylint: disable=import-error
 
-import re
-import requests
-import json
 from os import environ as ENV
+import json
+import re
+
+from dotenv import load_dotenv
+import requests
 import streamlit as st
 import pandas as pd
 import altair as alt
-from dotenv import load_dotenv
 
 from menu import menu
-from query_data import get_connection, load_query
+from query_data import (get_connection,
+                        load_query)
+from dashboard_items import logout_button
 
 st.set_page_config(
     layout="centered",
@@ -408,6 +411,9 @@ def display_chat_history(conn):
 if __name__ == "__main__":
 
     menu()
+
+    if st.session_state.user:
+        logout_button()
 
     # Initialize chat history in session state
     if "chat_history" not in st.session_state:

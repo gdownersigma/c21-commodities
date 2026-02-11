@@ -1,14 +1,17 @@
 """Advanced Technical Analysis Graph Module for Commodity Data."""
 
+# pylint: disable=import-error
+
+from os import environ as ENV
 import streamlit as st
 import pandas as pd
-from psycopg2 import connect
-from psycopg2.extras import RealDictCursor
-from os import environ as ENV
-from dotenv import load_dotenv
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from contextlib import contextmanager
+
+from query_data import (get_connection,
+                        fetch_data,
+                        update_user_commodities,
+                        get_commodities_with_user_subscriptions)
 
 
 # ==================== CONSTANTS ====================
@@ -18,42 +21,6 @@ COLOR_BEARISH = '#ef5350'
 COLOR_MA_7 = '#FFA500'
 COLOR_MA_14 = '#00CED1'
 COLOR_MA_20 = '#FF69B4'
-
-
-# ==================== DATABASE FUNCTIONS ====================
-
-@contextmanager
-def get_db_connection():
-    """Yields a PostgreSQL database connection and ensures cleanup."""
-    load_dotenv()
-    conn = connect(
-        dbname=ENV.get("DB_NAME"),
-        user=ENV.get("DB_USER"),
-        password=ENV.get("DB_PASSWORD"),
-        host=ENV.get("DB_HOST"),
-        port=ENV.get("DB_PORT"),
-    )
-    try:
-        yield conn
-    finally:
-        conn.close()
-
-
-@st.cache_data(ttl=300)
-def fetch_data(commodity_id: int) -> pd.DataFrame:
-    """Fetches market data for a commodity using parameterized queries."""
-    query = """
-        SELECT * FROM market_records
-        JOIN commodities AS c
-        USING (commodity_id)
-        WHERE commodity_id = %s
-    """
-    with get_db_connection() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute(query, (commodity_id,))
-            results = cur.fetchall()
-    df = pd.DataFrame(results)
-    return df
 
 
 # ==================== DATA PROCESSING ====================
@@ -150,7 +117,7 @@ def add_moving_average_traces(fig: go.Figure, df: pd.DataFrame) -> None:
                 y=df[col],
                 mode='lines',
                 name=name,
-                line=dict(color=color, width=1.5)
+                line={"color": color, "width": 1.5}
             ),
             row=1, col=1
         )
@@ -184,13 +151,13 @@ def configure_layout(fig: go.Figure) -> None:
         xaxis_rangeslider_visible=False,
         height=700,
         hovermode='x unified',
-        legend=dict(
-            orientation='h',
-            yanchor='bottom',
-            y=1.02,
-            xanchor='left',
-            x=0
-        )
+        legend={
+            "orientation": 'h',
+            "yanchor": 'bottom',
+            "y": 1.02,
+            "xanchor": 'left',
+            "x": 0
+        }
     )
     fig.update_yaxes(title_text="Price", row=1, col=1)
 
@@ -222,6 +189,113 @@ def render_metrics(metrics: dict) -> None:
     col4.metric("Volume", f"{metrics['volume']:,.0f}")
 
 
+def handle_submit(new_comm):
+    """Handle buy/sell alert submission."""
+
+    orig_comm = st.session_state.user_commodities[new_comm["id"]]
+
+    update_subscriptions = []
+
+    if not new_comm["buy"] and new_comm["buy_price"] != 0.0:
+        new_comm["buy_price"] = 0.0
+
+    if not new_comm["sell"] and new_comm["sell_price"] != 0.0:
+        new_comm["sell_price"] = 0.0
+
+    update = {}
+
+    if new_comm["buy_price"] != orig_comm["buy_price"]:
+        update["buy_price"] = new_comm["buy_price"]
+
+    if new_comm["sell_price"] != orig_comm["sell_price"]:
+        update["sell_price"] = new_comm["sell_price"]
+
+    if update:
+        update["user_id"] = st.session_state.user["user_id"]
+        update["commodity_id"] = new_comm["id"]
+        update_subscriptions.append(update)
+
+    if not update_subscriptions:
+        st.error("No changes made.")
+    else:
+        conn = get_connection(ENV)
+
+        update_user_commodities(conn, update_subscriptions)
+        get_commodities_with_user_subscriptions.clear()
+
+        st.success("Subscriptions updated successfully!")
+        st.session_state.user_commodities[new_comm["id"]] = {
+            "name": new_comm["name"],
+            "track": True,
+            "buy": new_comm["buy"],
+            "sell": new_comm["sell"],
+            "buy_price": new_comm["buy_price"],
+            "sell_price": new_comm["sell_price"]
+        }
+
+        conn.close()
+
+
+def build_price_edit_form(comm_id: int):
+    """Builds the price submission form for buy/sell alerts."""
+
+    st.sidebar.header("Buy/Sell Price Alerts")
+
+    comm = {
+        "id": comm_id,
+        **st.session_state.user_commodities[comm_id]
+    }
+
+    commodity_data = {
+        "id": comm["id"],
+        "name": comm["name"]
+    }
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        commodity_data["buy"] = st.sidebar.checkbox(
+            "Buy",
+            value=comm["buy"],
+            key=f"buy_{comm['id']}_alert")
+
+    with col2:
+        commodity_data["buy_price"] = st.sidebar.number_input(
+            "Buy Price",
+            value=comm["buy_price"],
+            min_value=0.0,
+            max_value=1000000.0,
+            step=0.01,
+            format="%.2f",
+            key=f"buy_price_{comm['id']}",
+            disabled=not commodity_data["buy"],
+            width=200)
+
+    col3, col4 = st.columns(2)
+
+    with col3:
+        commodity_data["sell"] = st.sidebar.checkbox(
+            "Sell",
+            value=comm["sell"],
+            key=f"sell_{comm['id']}_alert")
+
+    with col4:
+        commodity_data["sell_price"] = st.sidebar.number_input(
+            "Sell Price",
+            value=float(comm["sell_price"]),
+            min_value=0.0,
+            max_value=1000000.0,
+            step=0.01,
+            format="%.2f",
+            key=f"sell_price_{comm['id']}",
+            disabled=not commodity_data["sell"],
+            width=200)
+
+    with st.sidebar.container(horizontal_alignment="center"):
+        if st.sidebar.button("Submit"):
+            handle_submit(commodity_data)
+
+
 # ==================== MAIN FUNCTIONS ====================
 
 def build_chart(df: pd.DataFrame, settings: dict) -> go.Figure:
@@ -235,32 +309,34 @@ def build_chart(df: pd.DataFrame, settings: dict) -> go.Figure:
     return fig
 
 
-def adv_graph(commodity_id: int = None) -> go.Figure:
+def adv_graph(commodity_id: int = None):
     """Creates an advanced technical analysis graph for a commodity."""
     if commodity_id is None:
         commodity_id = st.session_state.get('analysis_commodity_id')
         if commodity_id is None:
             st.error("No commodity selected for analysis.")
-            return None
+            return
 
-    df = fetch_data(commodity_id)
+    conn = get_connection(ENV)
+    df = fetch_data(conn, commodity_id)
+    conn.close()
+
     if df.empty:
         st.error("No data found for the selected commodity.")
-        return None
+        return
 
     df_daily = prepare_daily_data(df)
     df_daily = calculate_moving_averages(df_daily)
 
     settings = render_sidebar()
     render_title(df_daily)
-
-    fig = build_chart(df_daily, settings)
-    st.plotly_chart(fig, use_container_width=True)
+    build_price_edit_form(commodity_id)
 
     metrics = get_price_metrics(df_daily)
     render_metrics(metrics)
 
-    return fig
+    fig = build_chart(df_daily, settings)
+    st.plotly_chart(fig, width='stretch')
 
 
 def main() -> None:
