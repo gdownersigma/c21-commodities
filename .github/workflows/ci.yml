@@ -22,6 +22,6 @@ jobs:
         pip install -r pipeline/pipeline_requirements.txt
         pip install -r dashboard/dashboard_requirements.txt
     - name: Linting
-      run: pylint daily_report dashboard historical_pipeline pipeline price_alerts --fail-under 8
+      run: pylint --recursive=y daily_report dashboard historical_pipeline pipeline price_alerts --fail-under 8 --ignore=venv,.venv --disable=duplicate-code
     - name: Testing
       run: pytest . --ignore-glob='*' || [ $? -eq 5 ]
