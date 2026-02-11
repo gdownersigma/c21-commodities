@@ -257,7 +257,7 @@ def build_price_edit_form(comm_id: int):
         commodity_data["buy"] = st.sidebar.checkbox(
             "Buy",
             value=comm["buy"],
-            key=f"buy_{comm["id"]}_alert")
+            key=f"buy_{comm['id']}_alert")
 
     with col2:
         commodity_data["buy_price"] = st.sidebar.number_input(
@@ -267,7 +267,7 @@ def build_price_edit_form(comm_id: int):
             max_value=1000000.0,
             step=0.01,
             format="%.2f",
-            key=f"buy_price_{comm["id"]}",
+            key=f"buy_price_{comm['id']}",
             disabled=not commodity_data["buy"],
             width=200)
 
@@ -277,7 +277,7 @@ def build_price_edit_form(comm_id: int):
         commodity_data["sell"] = st.sidebar.checkbox(
             "Sell",
             value=comm["sell"],
-            key=f"sell_{comm["id"]}_alert")
+            key=f"sell_{comm['id']}_alert")
 
     with col4:
         commodity_data["sell_price"] = st.sidebar.number_input(
@@ -287,7 +287,7 @@ def build_price_edit_form(comm_id: int):
             max_value=1000000.0,
             step=0.01,
             format="%.2f",
-            key=f"sell_price_{comm["id"]}",
+            key=f"sell_price_{comm['id']}",
             disabled=not commodity_data["sell"],
             width=200)
 

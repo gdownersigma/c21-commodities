@@ -475,14 +475,14 @@ def build_single_commodity_edit(comm: dict) -> dict:
             commodity_data["track"] = st.checkbox(
                 "Track",
                 value=comm.get("track", False),
-                key=f"track_{comm["id"]}")
+                key=f"track_{comm['id']}")
 
     with col3:
         with st.container(horizontal_alignment="center"):
             commodity_data["buy"] = st.checkbox(
                 "Buy",
                 value=comm["buy"],
-                key=f"buy_{comm["id"]}_alert",
+                key=f"buy_{comm['id']}_alert",
                 disabled=not commodity_data["track"])
 
     with col4:
@@ -490,7 +490,7 @@ def build_single_commodity_edit(comm: dict) -> dict:
             commodity_data["sell"] = st.checkbox(
                 "Sell",
                 value=comm["sell"],
-                key=f"sell_{comm["id"]}_alert",
+                key=f"sell_{comm['id']}_alert",
                 disabled=not commodity_data["track"])
 
     with col5:
@@ -502,7 +502,7 @@ def build_single_commodity_edit(comm: dict) -> dict:
                 max_value=1000000.0,
                 step=0.01,
                 format="%.2f",
-                key=f"buy_price_{comm["id"]}",
+                key=f"buy_price_{comm['id']}",
                 disabled=not commodity_data["buy"])
 
     with col6:
@@ -514,7 +514,7 @@ def build_single_commodity_edit(comm: dict) -> dict:
                 max_value=1000000.0,
                 step=0.01,
                 format="%.2f",
-                key=f"sell_price_{comm["id"]}",
+                key=f"sell_price_{comm['id']}",
                 disabled=not commodity_data["sell"])
 
     return commodity_data
