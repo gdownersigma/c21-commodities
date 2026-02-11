@@ -13,7 +13,7 @@ from requests.exceptions import RequestException
 
 from menu import menu_with_redirect
 from dashboard_items import logout_button
-from news.config import COMMODITIES, TAG_KEYWORDS, TAG_COLORS, COMMODITY_BADGES
+from news_folder.config import COMMODITIES, TAG_KEYWORDS, TAG_COLORS, COMMODITY_BADGES
 
 # =============================================================================
 # CONFIGURATION
