@@ -3,6 +3,7 @@
 import streamlit as st
 import pandas as pd
 from psycopg2 import connect
+from psycopg2.extras import RealDictCursor
 from os import environ as ENV
 from dotenv import load_dotenv
 import plotly.graph_objects as go
@@ -48,7 +49,10 @@ def fetch_data(commodity_id: int) -> pd.DataFrame:
         WHERE commodity_id = %s
     """
     with get_db_connection() as conn:
-        df = pd.read_sql_query(query, conn, params=(commodity_id,))
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(query, (commodity_id,))
+            results = cur.fetchall()
+    df = pd.DataFrame(results)
     return df
 
 
