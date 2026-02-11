@@ -47,6 +47,6 @@ def save_test_email(alert: dict, filename: str = "test_email.html"):
     # Replace cid:logo with relative file path for testing
     html = html.replace('src="cid:logo"', 'src="Logo.png"')
 
-    with open(filename, "w") as f:
+    with open(filename, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"Saved to {filename}")
