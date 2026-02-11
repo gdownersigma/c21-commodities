@@ -5,10 +5,11 @@ import pandas as pd
 from psycopg2 import connect
 from dotenv import load_dotenv
 
+load_dotenv()
+
 
 def get_conn():
     """Establishes and returns a connection to the PostgreSQL database."""
-    load_dotenv()
     return connect(
         dbname=ENV.get("DB_NAME"),
         user=ENV.get("DB_USER"),
