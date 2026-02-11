@@ -11,14 +11,16 @@ import streamlit as st
 from dotenv import load_dotenv
 from requests.exceptions import RequestException
 
-from config import COMMODITIES, TAG_KEYWORDS, TAG_COLORS, COMMODITY_BADGES
+from menu import menu_with_redirect
+from dashboard_items import logout_button
+from news.config import COMMODITIES, TAG_KEYWORDS, TAG_COLORS, COMMODITY_BADGES
 
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
 
 # Load CSS from external file
-CSS_FILE = Path(__file__).parent / "styles.css"
+CSS_FILE = Path(__file__).parent.parent / "news/styles.css"
 
 
 def load_css() -> str:
@@ -203,9 +205,7 @@ def render_news_card(article: dict):
             ('http://', 'https://')) else '#'
 
         # Escape markdown special characters in title to prevent unwanted formatting
-        title = article['title']
-        for char in ['`', '*', '_', '[', ']', '#']:
-            title = title.replace(char, f'\\{char}')
+        title = html.escape(article['title']).replace('$', r'\$')
 
         # Use Streamlit's native text rendering for proper theme support
         st.markdown(f"**📰 {title}**")
@@ -352,4 +352,8 @@ def main():
 
 
 if __name__ == "__main__":
+
+    menu_with_redirect()
+    logout_button()
+
     main()
