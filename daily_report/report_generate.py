@@ -1,5 +1,6 @@
 """Script to generate HTML reports for each user from extracted data."""
 import os
+from os import environ as ENV
 from io import BytesIO
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -8,7 +9,9 @@ import boto3
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import requests
 from report_extract import (
+    get_conn,
     get_previous_day_date,
     extract_user_commodities,
     extract_market_records,
@@ -19,6 +22,14 @@ def get_logo_bytes() -> bytes:
     """Load logo and return as bytes."""
     logo_path = os.path.join(os.path.dirname(__file__), "Logo.png")
     with open(logo_path, "rb") as f:
+        return f.read()
+
+
+def get_html_template() -> str:
+    """Load the HTML report template."""
+    template_path = os.path.join(
+        os.path.dirname(__file__), "report_template.html")
+    with open(template_path, "r", encoding="utf-8") as f:
         return f.read()
 
 
@@ -89,7 +100,6 @@ def generate_price_chart(symbol: str, commodity_name: str,
     start_price = prices.iloc[0]
     end_price = prices.iloc[-1]
     if start_price == 0:
-        # Avoid division by zero; treat change as 0% if the starting price is zero.
         change_pct = 0.0
     else:
         change_pct = ((end_price - start_price) / start_price) * 100
@@ -112,15 +122,72 @@ def generate_price_chart(symbol: str, commodity_name: str,
 
 def calculate_profit_loss(row: pd.Series) -> dict:
     """Calculate profit/loss for a commodity based on buy price."""
-    if pd.isna(row.get("buy_price")) or row.get("buy_price") == 0:
+    buy_price = row["buy_price"]
+    close_price = row["close_price"]
+
+    if pd.isna(buy_price) or buy_price == 0:
         return {"profit_loss": None, "profit_loss_pct": None}
 
-    current_price = row["close_price"]
-    buy_price = row["buy_price"]
-    profit_loss = current_price - buy_price
+    profit_loss = close_price - buy_price
     profit_loss_pct = (profit_loss / buy_price) * 100
 
     return {"profit_loss": profit_loss, "profit_loss_pct": profit_loss_pct}
+
+
+def generate_ai_summary(user_data: pd.DataFrame, report_date) -> str:
+    """Generate an AI summary of the user's commodity performance using OpenRouter."""
+    api_key = ENV.get("OPENROUTER_API_KEY")
+    if not api_key:
+        print("OPENROUTER_API_KEY not configured")
+        return ""
+
+    def format_commodity_info(row: pd.Series) -> str:
+        change = row["close_price"] - row["open_price_calc"]
+        change_pct = (change / row["open_price_calc"]) * \
+            100 if row["open_price_calc"] != 0 else 0
+        pl = calculate_profit_loss(row)
+        info = f"- {row['commodity_name']} ({row['symbol']}): Open ${row['open_price_calc']:.2f}, Close ${row['close_price']:.2f}, Change {change_pct:+.2f}%"
+        if pl["profit_loss"] is not None:
+            info += f", P/L {pl['profit_loss_pct']:+.2f}%"
+        return info
+
+    commodities_text = "\n".join(
+        user_data.apply(format_commodity_info, axis=1))
+
+    prompt = f"""You are a professional commodities market analyst providing a daily briefing to an investor.
+
+Based on the following portfolio performance data for {report_date.strftime('%B %d, %Y')}:
+
+{commodities_text}
+
+Write a concise friendly 3-4 sentence analysis that includes:
+1. A brief summary of overall portfolio performance (gains/losses)
+2. Highlight the best and worst performers
+3. One actionable insight or trend to watch based on the price movements
+
+Keep the tone professional but approachable and friendly don't make it too complex. Do not include greetings or sign-offs."""
+
+    try:
+        response = requests.post(
+            url="https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "HTTP-Referer": "http://localhost:8501",
+                "X-Title": "Pivot Point Daily Report",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "openai/gpt-5-nano",
+                "messages": [{"role": "user", "content": prompt}]
+            },
+            timeout=30
+        )
+        response.raise_for_status()
+        result = response.json()
+        return result["choices"][0]["message"]["content"].strip()
+    except Exception as e:
+        print(f"AI summary generation failed: {e}")
+        return ""
 
 
 def generate_user_html_report(user_name: str, user_data: pd.DataFrame,
@@ -131,21 +198,20 @@ def generate_user_html_report(user_name: str, user_data: pd.DataFrame,
     charts_html = ""
     images = {}
 
-    for _, row in user_data.iterrows():
-        pl = calculate_profit_loss(row)
+    ai_summary = generate_ai_summary(user_data, report_date)
 
+    def format_table_row(row: pd.Series) -> str:
+        pl = calculate_profit_loss(row)
         change = row["close_price"] - row["open_price_calc"]
         change_pct = (change / row["open_price_calc"]) * 100
         change_color = "#28a745" if change >= 0 else "#dc3545"
         change_symbol = "+" if change >= 0 else ""
-
         pl_html = "-"
         if pl["profit_loss"] is not None:
             pl_color = "#28a745" if pl["profit_loss"] >= 0 else "#dc3545"
             pl_symbol = "+" if pl["profit_loss"] >= 0 else ""
             pl_html = f'<span style="color: {pl_color}; font-weight: bold;">{pl_symbol}${pl["profit_loss"]:.2f} ({pl_symbol}{pl["profit_loss_pct"]:.2f}%)</span>'
-
-        rows_html += f"""
+        return f"""
         <tr>
             <td style="padding: 12px 10px; border-bottom: 1px solid #eee;"><strong>{row['commodity_name']}</strong><br><small style="color: #666;">{row['symbol']}</small></td>
             <td style="padding: 12px 10px; border-bottom: 1px solid #eee;">${row['open_price_calc']:.2f}</td>
@@ -158,91 +224,48 @@ def generate_user_html_report(user_name: str, user_data: pd.DataFrame,
         </tr>
         """
 
+    rows_html = "".join(user_data.apply(format_table_row, axis=1))
+
+    def generate_chart_html(row: pd.Series) -> tuple:
         chart_result = generate_price_chart(
-            row['symbol'], row['commodity_name'], market_df)
+            row["symbol"], row["commodity_name"], market_df)
         if chart_result:
             cid, img_bytes = chart_result
-            images[cid] = img_bytes
-            charts_html += f'<div style="margin: 15px 0; padding: 10px; border-bottom: 1px solid #eee;"><img src="cid:{cid}" alt="{row["commodity_name"]} price chart" style="max-width:100%;"/></div>'
+            html = f'<div style="margin: 15px 0; padding: 10px; border-bottom: 1px solid #eee;"><img src="cid:{cid}" alt="{row["commodity_name"]} price chart" style="max-width:100%;"/></div>'
+            return (cid, img_bytes, html)
+        return None
 
-    html = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Daily Commodities Report - {report_date}</title>
-</head>
-<body style="font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background: white; border-radius: 10px; margin-bottom: 20px;">
-        <tr>
-            <td style="padding: 30px;">
-                <table cellpadding="0" cellspacing="0">
-                    <tr>
-                        <td style="vertical-align: middle; padding-right: 20px;">
-                            <img src="cid:logo" alt="Pivot Point Logo" width="80" height="80" style="display: block; width: 80px; height: 80px; max-width: 80px;"/>
-                        </td>
-                        <td style="vertical-align: middle;">
-                            <h1 style="margin: 0 0 10px 0; color: #333;">📊 Daily Commodities Report</h1>
-                            <p style="margin: 5px 0; color: #333;">Hello, {format_name(user_name)}!</p>
-                            <p style="margin: 5px 0; color: #333;">Report Date: {report_date.strftime('%B %d, %Y')}</p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-    
-    <table width="100%" cellpadding="0" cellspacing="0" style="background: white; border-radius: 10px; margin-bottom: 20px;">
-        <tr>
-            <td style="padding: 20px;">
-                <h3 style="margin: 0 0 10px 0; color: #333;">Your Tracked Commodities</h3>
-                <p style="margin: 0; color: #333;">You are tracking <strong>{len(user_data)}</strong> commodities.</p>
-            </td>
-        </tr>
-    </table>
-    
-    <table width="100%" cellpadding="0" cellspacing="0" style="background: white; border-radius: 10px; border-collapse: collapse;">
-        <tr style="background: #F7941D;">
-            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Commodity</th>
-            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Open</th>
-            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Close</th>
-            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Change</th>
-            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Low</th>
-            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">High</th>
-            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">Volume</th>
-            <th style="padding: 15px 10px; text-align: left; color: white; font-weight: bold;">P/L</th>
-        </tr>
-        {rows_html}
-    </table>
-    
-    <table width="100%" cellpadding="0" cellspacing="0" style="background: white; border-radius: 10px; margin-top: 20px;">
-        <tr>
-            <td style="padding: 20px;">
-                <h3 style="margin: 0 0 15px 0; color: #1DAEEC;">📈 Price Charts</h3>
-                {charts_html}
-            </td>
-        </tr>
-    </table>
-    
-    <table width="100%" cellpadding="0" cellspacing="0">
-        <tr>
-            <td style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
-                <p style="margin: 5px 0;">This report was automatically generated by Pivot Point.</p>
-                <p style="margin: 5px 0;">Data as of {report_date}</p>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>
-"""
+    chart_results = user_data.apply(generate_chart_html, axis=1).dropna()
+    for result in chart_results:
+        cid, img_bytes, chart_html = result
+        images[cid] = img_bytes
+        charts_html += chart_html
+
+    ai_summary_section = ""
+    if ai_summary:
+        ai_summary_section = f'<table width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #1DAEEC 0%, #0D8BC2 100%); border-radius: 10px; margin-bottom: 20px;"><tr><td style="padding: 20px;"><h3 style="margin: 0 0 10px 0; color: white;">✨ AI Market Summary</h3><p style="margin: 0; color: white; line-height: 1.6;">{ai_summary}</p></td></tr></table>'
+
+    html = get_html_template().format(
+        report_date=report_date,
+        report_date_formatted=report_date.strftime('%B %d, %Y'),
+        user_name=format_name(user_name),
+        ai_summary_section=ai_summary_section,
+        commodity_count=len(user_data),
+        rows_html=rows_html,
+        charts_html=charts_html
+    )
+
     return {"html": html, "images": images}
 
 
 def generate_all_user_reports() -> dict:
     """Generate HTML reports for all users with tracked commodities."""
     report_date = get_previous_day_date()
-    user_commodities_df = extract_user_commodities()
-    market_df = extract_market_records()
+
+    conn = get_conn()
+    user_commodities_df = extract_user_commodities(conn)
+    market_df = extract_market_records(conn)
+    conn.close()
 
     if market_df.empty:
         print(f"No market data found for {report_date}")
@@ -251,22 +274,19 @@ def generate_all_user_reports() -> dict:
     users = user_commodities_df[["user_id",
                                  "user_name", "email"]].drop_duplicates()
 
-    reports = {}
-    for _, user in users.iterrows():
-        user_id = user["user_id"]
-        user_name = user["user_name"]
-        email = user["email"]
-
+    def process_user(row: pd.Series) -> tuple:
         user_data = get_user_market_data(
-            user_id, market_df, user_commodities_df)
-
+            row["user_id"], market_df, user_commodities_df)
         if user_data.empty:
-            print(f"No market data for user {user_name}")
-            continue
+            print(f"No market data for user {row['user_name']}")
+            return None
+        report = generate_user_html_report(
+            row["user_name"], user_data, report_date, market_df)
+        print(f"Generated report for {row['user_name']}")
+        return (row["email"], report)
 
-        reports[email] = generate_user_html_report(
-            user_name, user_data, report_date, market_df)
-        print(f"Generated report for {user_name}")
+    results = users.apply(process_user, axis=1).dropna()
+    reports = {email: report for email, report in results}
 
     return reports
 
@@ -318,7 +338,7 @@ def handler(event, context):
 
     print(f"Generated {len(reports)} reports.")
 
-    sender_email = os.environ.get("SENDER_EMAIL")
+    sender_email = ENV.get("SENDER_EMAIL")
     if not sender_email:
         print("ERROR: SENDER_EMAIL environment variable not set")
         return {"statusCode": 500, "error": "SENDER_EMAIL not configured"}
