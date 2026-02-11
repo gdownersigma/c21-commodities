@@ -317,7 +317,7 @@ def render_footer():
 def main():
     """Main application entry point."""
     load_dotenv()
-    fmp_api_key = ENV.get("FMP_API_KEY")
+    fmp_api_key = ENV.get("API_KEY")
 
     st.set_page_config(page_title="Commodity News Analysis",
                        page_icon="📊", layout="wide")
@@ -325,7 +325,7 @@ def main():
     st.title("📊 Commodity News Analysis")
 
     if not fmp_api_key:
-        st.error("⚠️ FMP_API_KEY not configured. Please set it in your .env file.")
+        st.error("⚠️ API_KEY not configured. Please set it in your .env file.")
         st.stop()
 
     st.markdown(
