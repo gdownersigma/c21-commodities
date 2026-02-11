@@ -25,6 +25,7 @@ COLOR_MA_20 = '#FF69B4'
 
 # ==================== DATA PROCESSING ====================
 
+@st.cache_data(ttl=300)
 def prepare_daily_data(df: pd.DataFrame) -> pd.DataFrame:
     """Resamples data to daily OHLC candles and calculates moving averages."""
     df_chart = df.copy()
@@ -43,14 +44,17 @@ def prepare_daily_data(df: pd.DataFrame) -> pd.DataFrame:
     return df_daily
 
 
+@st.cache_data(ttl=300)
 def calculate_moving_averages(df: pd.DataFrame) -> pd.DataFrame:
     """Calculates 7, 14, and 20 day moving averages."""
+    df = df.copy()
     df['MA_7'] = df['price'].rolling(window=7).mean()
     df['MA_14'] = df['price'].rolling(window=14).mean()
     df['MA_20'] = df['price'].rolling(window=20).mean()
     return df
 
 
+@st.cache_data(ttl=300)
 def get_price_metrics(df: pd.DataFrame) -> dict:
     """Calculates price metrics for display."""
     latest_price = df['price'].iloc[-1]
