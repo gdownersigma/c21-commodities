@@ -1,0 +1,36 @@
+/* =============================================================================
+   NEWS PAGE STYLES
+   ============================================================================= */
+
+/* Tags */
+.tag {
+    display: inline-block;
+    padding: 4px 10px;
+    margin: 2px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: 500;
+}
+.tag-supply { background: #fef3c7 !important; color: #92400e !important; }
+.tag-demand { background: #dbeafe !important; color: #1e40af !important; }
+.tag-policy { background: #f3e8ff !important; color: #7c3aed !important; }
+.tag-weather { background: #dcfce7 !important; color: #166534 !important; }
+.tag-geopolitical { background: #fee2e2 !important; color: #991b1b !important; }
+.tag-market { background: #e0e7ff !important; color: #3730a3 !important; }
+.tag-currency { background: #fce7f3 !important; color: #9d174d !important; }
+.tag-default { background: #f1f5f9 !important; color: #475569 !important; }
+
+/* Commodity badges */
+.commodity-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+}
+.badge-gold { background: #fef3c7 !important; color: #b45309 !important; }
+.badge-silver { background: #e5e7eb !important; color: #374151 !important; }
+.badge-copper { background: #fed7aa !important; color: #c2410c !important; }
+.badge-wheat { background: #fef9c3 !important; color: #a16207 !important; }
+.badge-oats { background: #ecfccb !important; color: #4d7c0f !important; }
+.badge-general { background: #e0e7ff !important; color: #3730a3 !important; }
