@@ -23,9 +23,8 @@ def get_previous_day_date() -> date:
     return (datetime.now() - timedelta(days=1)).date()
 
 
-def extract_market_records() -> pd.DataFrame:
+def extract_market_records(conn) -> pd.DataFrame:
     """Extract all market records from the previous day."""
-    conn = get_conn()
     query = """
         SELECT c.symbol, c.commodity_name, mr.recorded_at, mr.price,
                mr.volume, mr.day_high, mr.day_low
@@ -34,14 +33,14 @@ def extract_market_records() -> pd.DataFrame:
         WHERE DATE(mr.recorded_at) = %s
         ORDER BY mr.recorded_at DESC;
     """
-    df = pd.read_sql_query(query, conn, params=(get_previous_day_date(),))
-    conn.close()
-    return df
+    with conn.cursor() as cur:
+        cur.execute(query, (get_previous_day_date(),))
+        columns = [desc[0] for desc in cur.description]
+        return pd.DataFrame(cur.fetchall(), columns=columns)
 
 
-def extract_user_commodities() -> pd.DataFrame:
+def extract_user_commodities(conn) -> pd.DataFrame:
     """Extract all user commodities with user information."""
-    conn = get_conn()
     query = """
         SELECT uc.user_id, u.user_name, u.email, c.symbol, uc.buy_price, uc.sell_price
         FROM user_commodities uc
@@ -49,6 +48,7 @@ def extract_user_commodities() -> pd.DataFrame:
         JOIN commodities c ON uc.commodity_id = c.commodity_id
         ORDER BY u.user_name, c.symbol;
     """
-    df = pd.read_sql_query(query, conn)
-    conn.close()
-    return df
+    with conn.cursor() as cur:
+        cur.execute(query)
+        columns = [desc[0] for desc in cur.description]
+        return pd.DataFrame(cur.fetchall(), columns=columns)
