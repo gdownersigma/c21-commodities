@@ -1,6 +1,6 @@
 """Unit tests for news.py helper functions."""
 
-from news import (
+from pages.news import (
     identify_commodity,
     auto_tag_article,
     parse_date,
@@ -8,15 +8,11 @@ from news import (
     filter_news,
     render_tags,
 )
-import sys
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
-# Add the news directory to path for imports to work from any location
-sys.path.insert(0, str(Path(__file__).parent))
 
 
 # =============================================================================
@@ -112,7 +108,7 @@ class TestParseDate:
     def test_returns_current_time_for_invalid_date(self):
         """Test fallback to current time for invalid date."""
         mock_now = datetime(2026, 6, 15, 10, 30, 0)
-        with patch('news.datetime') as mock_datetime:
+        with patch('pages.news.datetime') as mock_datetime:
             mock_datetime.now.return_value = mock_now
             mock_datetime.fromisoformat = datetime.fromisoformat
             result = parse_date("invalid-date")
@@ -121,7 +117,7 @@ class TestParseDate:
     def test_returns_current_time_for_empty_string(self):
         """Test fallback to current time for empty string."""
         mock_now = datetime(2026, 6, 15, 10, 30, 0)
-        with patch('news.datetime') as mock_datetime:
+        with patch('pages.news.datetime') as mock_datetime:
             mock_datetime.now.return_value = mock_now
             result = parse_date("")
         assert result == ("2026-06-15", "10:30")
@@ -129,7 +125,7 @@ class TestParseDate:
     def test_returns_current_time_for_none(self):
         """Test fallback to current time for None."""
         mock_now = datetime(2026, 6, 15, 10, 30, 0)
-        with patch('news.datetime') as mock_datetime:
+        with patch('pages.news.datetime') as mock_datetime:
             mock_datetime.now.return_value = mock_now
             result = parse_date(None)
         assert result == ("2026-06-15", "10:30")

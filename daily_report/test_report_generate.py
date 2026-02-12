@@ -2,6 +2,7 @@
 import pandas as pd
 import pytest
 from datetime import date
+from unittest.mock import patch
 from report_generate import (
     format_name,
     calculate_profit_loss,
@@ -176,6 +177,11 @@ class TestGeneratePriceChart:
 
 class TestGenerateUserHtmlReport:
     """Tests for the generate_user_html_report function."""
+
+    @pytest.fixture(autouse=True)
+    def mock_ai_summary(self):
+        with patch("report_generate.generate_ai_summary", return_value="Mock AI summary"):
+            yield
 
     def test_generates_html_with_user_name(self, sample_user_data, sample_market_df, report_date):
         """Should generate HTML report with formatted user name and commodity data."""
