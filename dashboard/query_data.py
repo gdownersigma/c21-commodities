@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import streamlit as st
 import pandas as pd
 from psycopg2 import connect, sql
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import RealDictCursor, execute_values
 from psycopg2.extensions import connection
 
 
@@ -197,7 +197,8 @@ def create_commodity_connections(_conn: connection, comm_data: list[dict]):
                  item["buy_price"] if item["buy_price"] != 0 else None,
                  item["sell_price"] if item["sell_price"] != 0 else None)
                 for item in comm_data]
-        cur.executemany(query, data)
+        print(data)
+        execute_values(cur, query, data)
 
     _conn.commit()
 
@@ -208,8 +209,8 @@ def delete_user_commodities(_conn: connection, user_id: int, comm_ids: list):
     query = sql.SQL(load_query("delete_user_commodity_by_ids.sql"))
 
     with _conn.cursor() as cur:
-        data = [(user_id, comm_id) for comm_id in comm_ids]
-        cur.executemany(query, data)
+        data = tuple((user_id, comm_id) for comm_id in comm_ids)
+        cur.execute(query, (data,))
 
     _conn.commit()
 
@@ -229,7 +230,8 @@ def update_user_commodities(_conn: connection, update_data: list[dict]):
                  item["commodity_id"])
                 for item in buy_updates
             ]
-            cur.executemany(query, buy_data)
+            execute_values(
+                cur, query, buy_data, template="(%s::double precision, %s, %s)")
 
         if sell_updates:
             query = sql.SQL(load_query("update_sell_prices.sql"))
@@ -239,7 +241,8 @@ def update_user_commodities(_conn: connection, update_data: list[dict]):
                  item["commodity_id"])
                 for item in sell_updates
             ]
-            cur.executemany(query, sell_data)
+            execute_values(
+                cur, query, sell_data, template="(%s::double precision, %s, %s)")
 
     _conn.commit()
 
