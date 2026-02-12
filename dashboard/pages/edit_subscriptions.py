@@ -12,7 +12,8 @@ from query_data import (get_connection,
                         update_user_commodities,
                         get_commodities_with_user_subscriptions,
                         get_commodity_symbol_by_id)
-from dashboard_items import (display_markdown_title,
+from dashboard_items import (display_title,
+                             display_markdown_title,
                              build_single_commodity_edit,
                              page_redirect,
                              logout_button)
@@ -162,10 +163,7 @@ if __name__ == "__main__":
     menu_with_redirect()
     logout_button()
 
-    st.title(body="Pivot Point",
-             text_alignment="center")
-
-    st.divider()
+    display_title()
 
     st.header("Edit Subscriptions", text_alignment="center")
 

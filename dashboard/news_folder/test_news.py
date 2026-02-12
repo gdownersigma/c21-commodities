@@ -7,10 +7,22 @@ from pages.news import (
     deduplicate_news,
     filter_news,
     render_tags,
+    process_news_data,
+    load_css,
+    fetch_general_news,
+    fetch_stock_news,
+    fetch_commodity_prices,
+    render_news_card,
+    render_sidebar,
+    render_news_feed_tab,
+    render_prices_tab,
+    render_statistics_tab,
+    render_footer,
+    main,
 )
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, mock_open, MagicMock
+from requests.exceptions import RequestException
 
 import pytest
 
@@ -254,3 +266,370 @@ class TestRenderTags:
         """Test empty list returns empty string."""
         result = render_tags([])
         assert result == ""
+
+
+# =============================================================================
+# process_news_data tests
+# =============================================================================
+
+class TestProcessNewsData:
+    """Tests for process_news_data function."""
+
+    def test_processes_single_item(self):
+        """Test processing a single news item."""
+        raw = [{"title": "Gold prices rise", "text": "Gold is up",
+                "publishedDate": "2026-02-10T10:00:00Z", "site": "News Site", "url": "http://example.com"}]
+        result = process_news_data(raw)
+        assert len(result) == 1
+        assert result[0]["title"] == "Gold prices rise"
+        assert result[0]["source"] == "News Site"
+        assert "Gold" in result[0]["commodities"]
+
+    def test_handles_missing_fields(self):
+        """Test handling items with missing fields."""
+        raw = [{}]
+        result = process_news_data(raw)
+        assert len(result) == 1
+        assert result[0]["title"] == ""
+        assert result[0]["url"] == "#"
+
+    def test_truncates_long_description(self):
+        """Test that long descriptions are truncated."""
+        long_text = "x" * 600
+        raw = [{"text": long_text}]
+        result = process_news_data(raw)
+        assert len(result[0]["description"]) == 503  # 500 + "..."
+
+    def test_empty_list_returns_empty(self):
+        """Test empty input returns empty list."""
+        result = process_news_data([])
+        assert result == []
+
+    def test_uses_content_if_text_missing(self):
+        """Test that content field is used when text is missing."""
+        raw = [{"content": "Article content"}]
+        result = process_news_data(raw)
+        assert result[0]["description"] == "Article content"
+
+
+# =============================================================================
+# load_css tests
+# =============================================================================
+
+class TestLoadCss:
+    """Tests for load_css function."""
+
+    def test_returns_style_tags(self):
+        """Test that CSS is wrapped in style tags."""
+        with patch("builtins.open", mock_open(read_data=".test { color: red; }")):
+            result = load_css()
+        assert "<style>" in result
+        assert "</style>" in result
+        assert ".test { color: red; }" in result
+
+
+# =============================================================================
+# fetch_general_news tests
+# =============================================================================
+
+class TestFetchGeneralNews:
+    """Tests for fetch_general_news function."""
+
+    @patch("pages.news.requests.get")
+    def test_returns_list_on_success(self, mock_get):
+        """Test successful response returns list."""
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = [{"title": "News"}]
+        result = fetch_general_news.__wrapped__("api_key")
+        assert result == [{"title": "News"}]
+
+    @patch("pages.news.requests.get")
+    def test_returns_empty_on_non_200(self, mock_get):
+        """Test non-200 status returns empty list."""
+        mock_get.return_value.status_code = 500
+        result = fetch_general_news.__wrapped__("api_key")
+        assert result == []
+
+    @patch("pages.news.requests.get")
+    def test_returns_empty_on_request_exception(self, mock_get):
+        """Test request exception returns empty list."""
+        mock_get.side_effect = RequestException()
+        result = fetch_general_news.__wrapped__("api_key")
+        assert result == []
+
+    @patch("pages.news.requests.get")
+    def test_returns_empty_on_non_list_response(self, mock_get):
+        """Test non-list JSON returns empty list."""
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"error": "invalid"}
+        result = fetch_general_news.__wrapped__("api_key")
+        assert result == []
+
+
+# =============================================================================
+# fetch_stock_news tests
+# =============================================================================
+
+class TestFetchStockNews:
+    """Tests for fetch_stock_news function."""
+
+    @patch("pages.news.requests.get")
+    def test_returns_list_on_success(self, mock_get):
+        """Test successful response returns list."""
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = [{"title": "Stock News"}]
+        result = fetch_stock_news.__wrapped__("api_key", ["GLD"])
+        assert result == [{"title": "Stock News"}]
+
+    @patch("pages.news.requests.get")
+    def test_returns_empty_on_non_200(self, mock_get):
+        """Test non-200 status returns empty list."""
+        mock_get.return_value.status_code = 404
+        result = fetch_stock_news.__wrapped__("api_key", ["GLD"])
+        assert result == []
+
+    @patch("pages.news.requests.get")
+    def test_returns_empty_on_exception(self, mock_get):
+        """Test exception returns empty list."""
+        mock_get.side_effect = ValueError()
+        result = fetch_stock_news.__wrapped__("api_key", ["GLD"])
+        assert result == []
+
+
+# =============================================================================
+# fetch_commodity_prices tests
+# =============================================================================
+
+class TestFetchCommodityPrices:
+    """Tests for fetch_commodity_prices function."""
+
+    @patch("pages.news.requests.get")
+    def test_returns_prices_on_success(self, mock_get):
+        """Test successful response returns prices dict."""
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = [
+            {"symbol": "GCUSD", "price": 2000,
+                "change": 10, "changesPercentage": 0.5}
+        ]
+        result = fetch_commodity_prices.__wrapped__("api_key")
+        assert "Gold" in result
+        assert result["Gold"]["price"] == 2000
+
+    @patch("pages.news.requests.get")
+    def test_returns_empty_on_non_200(self, mock_get):
+        """Test non-200 status returns empty dict."""
+        mock_get.return_value.status_code = 500
+        result = fetch_commodity_prices.__wrapped__("api_key")
+        assert result == {}
+
+    @patch("pages.news.requests.get")
+    def test_returns_empty_on_exception(self, mock_get):
+        """Test exception returns empty dict."""
+        mock_get.side_effect = RequestException()
+        result = fetch_commodity_prices.__wrapped__("api_key")
+        assert result == {}
+
+    @patch("pages.news.requests.get")
+    def test_returns_empty_on_non_list_response(self, mock_get):
+        """Test non-list JSON returns empty dict."""
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"error": "bad"}
+        result = fetch_commodity_prices.__wrapped__("api_key")
+        assert result == {}
+
+
+# =============================================================================
+# render_news_card tests
+# =============================================================================
+
+class TestRenderNewsCard:
+    """Tests for render_news_card function."""
+
+    @patch("pages.news.st")
+    def test_renders_without_error(self, mock_st):
+        """Test that render_news_card runs without error."""
+        mock_st.container.return_value.__enter__ = MagicMock()
+        mock_st.container.return_value.__exit__ = MagicMock()
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+        article = {
+            "date": "2026-02-10",
+            "time": "14:00",
+            "title": "Test Article",
+            "description": "Description",
+            "commodities": ["Gold"],
+            "tags": ["Market"],
+            "source": "Test",
+            "url": "http://example.com",
+        }
+        render_news_card(article)
+        mock_st.container.assert_called()
+
+    @patch("pages.news.st")
+    def test_handles_unsafe_url(self, mock_st):
+        """Test that unsafe URLs are replaced with #."""
+        mock_st.container.return_value.__enter__ = MagicMock()
+        mock_st.container.return_value.__exit__ = MagicMock()
+        mock_st.columns.return_value = [MagicMock(), MagicMock()]
+        article = {
+            "date": "2026-02-10",
+            "time": "14:00",
+            "title": "Test",
+            "description": "Desc",
+            "commodities": ["Gold"],
+            "tags": ["Market"],
+            "source": "Test",
+            "url": "javascript:alert(1)",
+        }
+        render_news_card(article)
+        # Check that markdown was called with safe link
+        calls = [str(c) for c in mock_st.markdown.call_args_list]
+        assert any("#" in c for c in calls)
+
+
+# =============================================================================
+# render_sidebar tests
+# =============================================================================
+
+class TestRenderSidebar:
+    """Tests for render_sidebar function."""
+
+    @patch("pages.news.st")
+    def test_returns_selections(self, mock_st):
+        """Test that render_sidebar returns commodity and tag selections."""
+        mock_st.sidebar.selectbox.return_value = "Gold"
+        mock_st.sidebar.multiselect.return_value = ["Supply"]
+        mock_st.sidebar.button.return_value = False
+        commodity, tags = render_sidebar()
+        assert commodity == "Gold"
+        assert tags == ["Supply"]
+
+    @patch("pages.news.st")
+    def test_refresh_button_clears_cache(self, mock_st):
+        """Test refresh button triggers cache clear."""
+        mock_st.sidebar.selectbox.return_value = "All Commodities"
+        mock_st.sidebar.multiselect.return_value = []
+        mock_st.sidebar.button.return_value = True
+        with patch("pages.news.fetch_general_news") as mock_fetch_general, \
+                patch("pages.news.fetch_stock_news") as mock_fetch_stock, \
+                patch("pages.news.fetch_commodity_prices") as mock_fetch_prices:
+            render_sidebar()
+            mock_fetch_general.clear.assert_called()
+            mock_fetch_stock.clear.assert_called()
+            mock_fetch_prices.clear.assert_called()
+
+
+# =============================================================================
+# render_news_feed_tab tests
+# =============================================================================
+
+class TestRenderNewsFeedTab:
+    """Tests for render_news_feed_tab function."""
+
+    @patch("pages.news.st")
+    @patch("pages.news.render_news_card")
+    def test_renders_articles(self, mock_render_card, mock_st):
+        """Test that articles are rendered."""
+        news = [{"title": "Article 1"}, {"title": "Article 2"}]
+        render_news_feed_tab(news)
+        assert mock_render_card.call_count == 2
+
+    @patch("pages.news.st")
+    def test_shows_info_when_empty(self, mock_st):
+        """Test info message shown when no news."""
+        render_news_feed_tab([])
+        mock_st.info.assert_called()
+
+
+# =============================================================================
+# render_prices_tab tests
+# =============================================================================
+
+class TestRenderPricesTab:
+    """Tests for render_prices_tab function."""
+
+    @patch("pages.news.st")
+    @patch("pages.news.fetch_commodity_prices")
+    def test_displays_prices(self, mock_fetch, mock_st):
+        """Test prices are displayed."""
+        mock_fetch.return_value = {
+            "Gold": {"price": 2000, "changesPercentage": 0.5}}
+        mock_st.spinner.return_value.__enter__ = MagicMock()
+        mock_st.spinner.return_value.__exit__ = MagicMock()
+        mock_st.columns.return_value = [MagicMock()]
+        render_prices_tab("api_key")
+        mock_st.subheader.assert_called()
+
+    @patch("pages.news.st")
+    @patch("pages.news.fetch_commodity_prices")
+    def test_shows_warning_when_no_prices(self, mock_fetch, mock_st):
+        """Test warning shown when prices unavailable."""
+        mock_fetch.return_value = {}
+        mock_st.spinner.return_value.__enter__ = MagicMock()
+        mock_st.spinner.return_value.__exit__ = MagicMock()
+        render_prices_tab("api_key")
+        mock_st.warning.assert_called()
+
+
+# =============================================================================
+# render_statistics_tab tests
+# =============================================================================
+
+class TestRenderStatisticsTab:
+    """Tests for render_statistics_tab function."""
+
+    @patch("pages.news.st")
+    def test_shows_info_when_empty(self, mock_st):
+        """Test info shown when no news."""
+        render_statistics_tab([])
+        mock_st.info.assert_called()
+
+    @patch("pages.news.st")
+    @patch("pages.news.pd")
+    def test_displays_statistics(self, mock_pd, mock_st):
+        """Test statistics are displayed."""
+        mock_st.columns.side_effect = [
+            [MagicMock(), MagicMock()],  # First call for charts
+            # Second call for metrics
+            [MagicMock(), MagicMock(), MagicMock(), MagicMock()],
+        ]
+        news = [
+            {"commodities": ["Gold"], "tags": ["Market"], "source": "Test"},
+            {"commodities": ["Silver"], "tags": ["Supply"], "source": "Test2"},
+        ]
+        render_statistics_tab(news)
+        mock_st.subheader.assert_called()
+
+
+# =============================================================================
+# render_footer tests
+# =============================================================================
+
+class TestRenderFooter:
+    """Tests for render_footer function."""
+
+    @patch("pages.news.st")
+    def test_renders_footer(self, mock_st):
+        """Test footer renders without error."""
+        mock_st.columns.return_value = [
+            MagicMock(), MagicMock(), MagicMock(), MagicMock()]
+        render_footer()
+        mock_st.divider.assert_called()
+        mock_st.subheader.assert_called()
+
+
+# =============================================================================
+# main tests
+# =============================================================================
+
+class TestMain:
+    """Tests for main function."""
+
+    @patch("pages.news.st")
+    @patch("pages.news.load_dotenv")
+    @patch("pages.news.ENV", {"API_KEY": None})
+    def test_stops_without_api_key(self, mock_dotenv, mock_st):
+        """Test that main stops if no API key."""
+        mock_st.stop.side_effect = SystemExit()
+        with pytest.raises(SystemExit):
+            main()
+        mock_st.error.assert_called()

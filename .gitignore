@@ -30,9 +30,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+.coverage
 
 # Virtual environments
 .venv/
 
 #html test files
 .html
+
+.coverage

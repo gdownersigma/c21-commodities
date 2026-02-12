@@ -10,7 +10,8 @@ from query_data import (get_connection,
                         get_user_count_by_email,
                         create_user,
                         create_commodity_connections)
-from dashboard_items import (build_form,
+from dashboard_items import (display_title,
+                             build_form,
                              page_redirect)
 from helper_functions import (fill_user_commodities,
                               hash_and_encrypt)
@@ -24,47 +25,51 @@ st.session_state.last_page = "sign_up"
 
 def handle_signup(conn, field_input):
     """Handle signup logic."""
-    user_count = get_user_count_by_email(
-        conn, field_input["email"])
 
-    if user_count != 0:
-        st.error("An account with this email already exists. Please log in.")
+    if field_input["password"] != field_input["password confirmation"]:
+        st.error("Passwords do not match. Please try again.")
     else:
-        field_input["hashed_password"] = hash_and_encrypt(
-            ENV,
-            field_input["password"])
+        user_count = get_user_count_by_email(
+            conn, field_input["email"])
 
-        user_id = create_user(conn, field_input)
+        if user_count != 0:
+            st.error("An account with this email already exists. Please log in.")
+        else:
+            field_input["hashed_password"] = hash_and_encrypt(
+                ENV,
+                field_input["password"])
 
-        user = {
-            "user_id": user_id,
-            "user_name": field_input["name"],
-            "email": field_input["email"]
-        }
+            user_id = create_user(conn, field_input)
 
-        st.success(f"Welcome, {user['user_name']}!")
-
-        comm_data = []
-
-        for comm_id in [10, 18, 40]:
-            comm_data.append({
+            user = {
                 "user_id": user_id,
-                "commodity_id": comm_id,
-                "buy_price": 0.0,
-                "sell_price": 0.0
-            })
+                "user_name": field_input["name"],
+                "email": field_input["email"]
+            }
 
-        create_commodity_connections(
-            conn,
-            comm_data
-        )
+            st.success(f"Welcome, {user['user_name']}!")
 
-        fill_user_commodities(conn, user_id)
+            comm_data = []
 
-        st.session_state.user = user
-        st.session_state.num_commodities = 1
-        st.session_state.selected_commodities = {}
-        st.switch_page("dashboard.py")
+            for comm_id in [10, 18, 40]:
+                comm_data.append({
+                    "user_id": user_id,
+                    "commodity_id": comm_id,
+                    "buy_price": 0.0,
+                    "sell_price": 0.0
+                })
+
+            create_commodity_connections(
+                conn,
+                comm_data
+            )
+
+            fill_user_commodities(conn, user_id)
+
+            st.session_state.user = user
+            st.session_state.num_commodities = 1
+            st.session_state.selected_commodities = {}
+            st.switch_page("dashboard.py")
 
 
 def handle_cancel():
@@ -77,14 +82,7 @@ if __name__ == "__main__":
 
     menu()
 
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.image("images/pivot_point.png", width='stretch')
-
-    st.title(body="Pivot Point",
-             text_alignment="center")
-
-    st.divider()
+    display_title()
 
     st.header("Sign Up", text_alignment="center")
 
@@ -96,6 +94,7 @@ if __name__ == "__main__":
             "name": "default",
             "email": "default",
             "password": "password",
+            "password confirmation": "password",
         },
         form_name="Sign up",
         form_key="sign_up_form",

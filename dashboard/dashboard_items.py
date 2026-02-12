@@ -3,6 +3,7 @@
 from os import environ as ENV
 from datetime import timedelta
 import html
+import re
 import streamlit as st
 import pandas as pd
 import altair as alt
@@ -313,16 +314,29 @@ def build_single_commodity_graph(market_df: pd.DataFrame,
         )
         render_analysis_button(comm_id, unique_key)
 
-    # Graph column
-    with graph_col:
-        chart = create_single_line_chart(
-            market_df, min_time, max_time, y_min, y_max)
-        st.altair_chart(chart, width='stretch')
+            # Fancy high/low display
+            st.markdown("---")
+            st.markdown(f"""
+                <div style="background-color: #ff801d40; 
+                            border-radius: 10px; padding: 15px; text-align: center;
+                            border: 3px solid #ff801d;">
+                    <p style="color: #ff801d; margin: 0; font-size: 14px;">{period_label} HIGH</p>
+                    <p style="color: #22c55e; font-size: 24px; font-weight: 700; margin: 5px 0;">
+                        ${period_high:.2f}
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
 
-    # Metrics column
-    period_label = get_period_label(time_range_hours)
-    with metrics_col:
-        render_metrics_panel(market_df, period_high, period_low, period_label)
+            st.markdown(f"""
+                <div style="background-color: #ff801d40; 
+                            border-radius: 10px; padding: 15px; text-align: center; margin-top: 10px;
+                            border: 3px solid #ff801d;">
+                    <p style="color: #ff801d; margin: 0; font-size: 14px;">{period_label} LOW</p>
+                    <p style="color: #ef4444; font-size: 24px; font-weight: 700; margin: 5px 0;">
+                        ${period_low:.2f}
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
 
     st.divider()
 
@@ -406,7 +420,7 @@ def build_combined_metrics(df: pd.DataFrame, market_df: pd.DataFrame):
                 <div style="background: linear-gradient(135deg, #03c1ff15 0%, #e2e8f030 100%); 
                             border-left: 3px solid #03c1ff;
                             border-radius: 8px; padding: 12px; margin-bottom: 10px;">
-                    <p style="color: #1e293b; font-weight: 600; margin: 0 0 5px 0;">{comm_name}</p>
+                    <p style="color: #03c1ff; font-weight: 600; margin: 0 0 5px 0;">{comm_name}</p>
                     <p style="color: #03c1ff; font-size: 20px; font-weight: 700; margin: 0;">
                         ${latest['price']:.2f}
                         <span style="font-size: 14px; 
@@ -468,10 +482,14 @@ def page_redirect(msg: str, page: str, alignment: str = "center"):
 def display_markdown_title(title: str,
                            alignment: str = "center",
                            size: int = 21,
-                           weight: int = 600):
+                           weight: int = 600,
+                           colour: str = "#FFFFFF"):
     """Display page title."""
+
+    title = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', title)
+
     st.markdown(f"""
-            <div style='text-align: {alignment}; font-size: {size}px; font-weight: {weight};'>
+            <div style='text-align: {alignment}; font-size: {size}px; font-weight: {weight}; color: {colour};'>
                 {title}
             </div>
         """, unsafe_allow_html=True)
@@ -569,3 +587,21 @@ def welcome_message():
         """, unsafe_allow_html=True)
 
     st.sidebar.divider()
+
+
+def display_title():
+    """Display dashboard title and header."""
+
+    st.markdown(f"""
+            <div style='text-align: center; font-size: 50px; font-weight: 700;'>
+                <span style="color: #009BFFFE;">Pivot</span> <span style="color: #FF6D0AFF;">Point</span>
+            </div>
+        """, unsafe_allow_html=True, text_alignment='center')
+
+    st.markdown(f"""
+            <div style='text-align: center; font-size: 30px; font-weight: 700;'>
+                <span style="color: #009BFFFE;">Trade Smarter,</span> <span style="color: #FF6D0AFF;">Not Harder</span>
+            </div>
+        """, unsafe_allow_html=True, text_alignment='center')
+
+    st.divider()

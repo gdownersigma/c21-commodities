@@ -14,12 +14,13 @@ def authenticated_menu():
     st.sidebar.page_link("pages/news.py", label="Commodity News")
     st.sidebar.page_link("pages/chatbot.py", label="ICMA Chatbot")
     st.sidebar.page_link("pages/edit_subscriptions.py",
-                         label="Account Settings")
+                         label="Manage Commodities")
 
 
 def unauthenticated_menu():
     """Show a navigation menu for unauthenticated users."""
 
+    st.sidebar.divider()
     st.sidebar.page_link("dashboard.py", label="Home")
     st.sidebar.page_link("pages/log_in.py", label="Log in")
 
