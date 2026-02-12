@@ -42,7 +42,7 @@ The project runs on AWS infrastructure managed via Terraform:
 
 ## Tech Stack
 
-- **Backend**: Python 3.8+
+- **Backend**: Python 3.9+
 - **Database**: PostgreSQL
 - **Dashboard**: Streamlit, Plotly, Altair
 - **Infrastructure**: Terraform, AWS (Lambda, RDS, ECR, SES)
@@ -50,7 +50,7 @@ The project runs on AWS infrastructure managed via Terraform:
 
 ## Prerequisites
 
-- Python 3.8+
+- Python 3.9+
 - PostgreSQL database
 - AWS account (for deployment)
 - FMP API key
@@ -84,6 +84,11 @@ CHATBOT_API_KEY=your_openrouter_api_key
 AWS_ACCESS_KEY_ID=your_aws_access_key
 AWS_SECRET_ACCESS_KEY=your_aws_secret_key
 SES_EMAIL=your_ses_verified_email
+SENDER_EMAIL=your_ses_verified_sender_email
+HISTORICAL_LAMBDA_NAME=your_historical_lambda_function_name
+
+# Security 
+ENCRYPTION_KEY=your_encryption_key
 ```
 
 ### 3. Set up the database
