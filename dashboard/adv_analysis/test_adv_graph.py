@@ -3,7 +3,6 @@
 import pytest
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
 import plotly.graph_objects as go
 
