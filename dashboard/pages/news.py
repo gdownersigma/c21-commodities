@@ -328,7 +328,7 @@ def main():
                            alignment="center",
                            size=44,
                            weight=700,
-                           colour="#009BFFFE;")
+                           colour="#009BFFFE")
 
     if not fmp_api_key:
         st.error("⚠️ API_KEY not configured. Please set it in your .env file.")
