@@ -117,14 +117,14 @@ def display_key_metrics(df: pd.DataFrame, conn):
 
     st.markdown(f"""
         <div style="text-align: center; padding: 20px 0;">
-            <h2 style="margin-bottom: 30px; color: #1e293b;">Key Metrics</h2>
+            <h2 style="margin-bottom: 30px; color: #FFFFFF;">Key Metrics</h2>
             <div style="display: flex; justify-content: center; gap: 60px;">
                 <div style="background: linear-gradient(135deg, #ff801d15 0%, #ff801d30 100%);
                             border: 2px solid #ff801d;
                             border-radius: 15px;
                             padding: 25px 40px;
                             min-width: 200px;">
-                    <p style="color: #64748b; font-size: 14px; margin: 0 0 8px 0;">
+                    <p style="color: #ff801d; font-size: 14px; margin: 0 0 8px 0;">
                         Subscribed Commodities
                     </p>
                     <p style="color: #ff801d; font-size: 42px; font-weight: 700; margin: 0;">
@@ -140,7 +140,7 @@ def display_key_metrics(df: pd.DataFrame, conn):
                     padding: 25px 40px;
                     min-width: 200px;"
                 >
-                    <p style="color: #64748b; font-size: 14px; margin: 0 0 8px 0;">
+                    <p style="color: {change_color}; font-size: 14px; margin: 0 0 8px 0;">
                         Average Price Change
                     </p>
                     <p style="color: {change_color}; font-size: 42px; font-weight: 700; margin: 0;">
