@@ -31,185 +31,298 @@ def add_commodity_selector(commodity_options: list, i: int):
     )
 
 
+# --- Helper functions for graph building ---
+
+def render_time_range_buttons(unique_key: str):
+    """Render time range selection buttons (3H, 1D, 7D, 30D)."""
+    time_col1, time_col2, time_col3, time_col4 = st.columns(4)
+    with time_col1:
+        if st.button("3H", key=f"time_3h_{unique_key}", width='stretch'):
+            st.session_state[f"time_range_{unique_key}"] = 3
+    with time_col2:
+        if st.button("1D", key=f"time_1d_{unique_key}", width='stretch'):
+            st.session_state[f"time_range_{unique_key}"] = 24
+    with time_col3:
+        if st.button("7D", key=f"time_7d_{unique_key}", width='stretch'):
+            st.session_state[f"time_range_{unique_key}"] = 168
+    with time_col4:
+        if st.button("30D", key=f"time_30d_{unique_key}", width='stretch'):
+            st.session_state[f"time_range_{unique_key}"] = 720
+
+
+def calculate_time_bounds(data_max_time, data_min_time, time_range_hours: int) -> tuple:
+    """Calculate min and max time bounds based on selected time range."""
+    max_time = data_max_time
+    requested_min_time = data_max_time - timedelta(hours=time_range_hours)
+    min_time = max(data_min_time, requested_min_time)
+    return min_time, max_time, requested_min_time
+
+
+def fetch_historical_data_if_needed(comm_id: int, requested_min_time, data_min_time):
+    """Fetch historical data from Lambda if needed for non-default commodities."""
+    if requested_min_time < data_min_time and int(comm_id) not in DEFAULT_COMMODITY_IDS:
+        if f"fetching_{comm_id}" not in st.session_state:
+            conn = get_connection(ENV)
+            symbol = get_commodity_symbol_by_id(conn, int(comm_id))
+            conn.close()
+            if symbol:
+                invoke_historical_lambda(symbol)
+                st.session_state[f"fetching_{comm_id}"] = True
+        st.toast("Bear with us while we fetch the data...", icon="⏳")
+
+
+def fetch_historical_data_for_multiple(chart_df: pd.DataFrame,
+                                       requested_min_time,
+                                       data_min_time):
+    """Fetch historical data for multiple commodities if needed."""
+    if requested_min_time < data_min_time:
+        needs_fetch = False
+        for comm_id in chart_df['commodity_id'].unique():
+            if int(comm_id) not in DEFAULT_COMMODITY_IDS:
+                if f"fetching_{comm_id}" not in st.session_state:
+                    conn = get_connection(ENV)
+                    symbol = get_commodity_symbol_by_id(conn, int(comm_id))
+                    conn.close()
+                    if symbol:
+                        invoke_historical_lambda(symbol)
+                        st.session_state[f"fetching_{comm_id}"] = True
+                        needs_fetch = True
+        if needs_fetch:
+            st.toast("Bear with us while we fetch the data...", icon="⏳")
+
+
+def calculate_period_high_low(market_df: pd.DataFrame, min_time) -> tuple:
+    """Calculate period high and low prices from filtered data."""
+    filtered_df = market_df[market_df['recorded_at'] >= min_time]
+    if not filtered_df.empty:
+        period_high = float(filtered_df['price'].max())
+        period_low = float(filtered_df['price'].min())
+    else:
+        period_high = float(market_df['price'].max())
+        period_low = float(market_df['price'].min())
+    return period_high, period_low
+
+
+def calculate_y_axis_defaults(period_high: float,
+                              period_low: float,
+                              reference_price: float) -> tuple:
+    """Calculate default Y-axis bounds with padding."""
+    price_range = period_high - period_low
+    padding = price_range * 0.05 if price_range > 0 else reference_price * 0.01
+    default_y_max = float(period_high + padding)
+    default_y_min = float(max(0, period_low - padding))
+    return default_y_min, default_y_max
+
+
+def render_price_input_css():
+    """Render custom CSS for orange-styled price inputs."""
+    st.markdown("""
+        <style>
+            div[data-testid="stNumberInput"] input {
+                border-color: #e6530c !important;
+            }
+            div[data-testid="stNumberInput"] button {
+                background-color: #ff801d !important;
+                color: white !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+
+def render_price_inputs(default_y_min: float,
+                        default_y_max: float,
+                        price_step: float,
+                        key_prefix: str,
+                        time_range_hours: int) -> tuple:
+    """Render min/max price number inputs and return selected values."""
+    st.markdown("**Price**")
+
+    y_max_val = st.number_input(
+        "Max $",
+        min_value=0.0,
+        value=default_y_max,
+        step=price_step,
+        format="%.2f",
+        key=f"{key_prefix}_max_{time_range_hours}"
+    )
+    y_min_val = st.number_input(
+        "Min $",
+        min_value=0.0,
+        value=default_y_min,
+        step=price_step,
+        format="%.2f",
+        key=f"{key_prefix}_min_{time_range_hours}"
+    )
+
+    # Ensure min is always less than max
+    y_min = min(y_min_val, y_max_val)
+    y_max = max(y_min_val, y_max_val)
+    return y_min, y_max
+
+
+def render_analysis_button(comm_id: int, unique_key: str):
+    """Render analysis mode button if user is logged in."""
+    if st.session_state.user:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("📊 Analysis", key=f"analysis_{unique_key}", width='stretch'):
+            st.session_state.analysis_commodity_id = int(comm_id)
+            st.switch_page("pages/analysis.py")
+
+
+def create_single_line_chart(market_df: pd.DataFrame,
+                             min_time,
+                             max_time,
+                             y_min: float,
+                             y_max: float) -> alt.Chart:
+    """Create an interactive single-line Altair chart."""
+    return alt.Chart(market_df).mark_line(
+        color='#03c1ff',
+        strokeWidth=2.5
+    ).encode(
+        x=alt.X('recorded_at:T', title='Date & Time',
+                axis=alt.Axis(format='%d %b %H:%M', labelAngle=-45),
+                scale=alt.Scale(domain=[min_time.isoformat(), max_time.isoformat()])),
+        y=alt.Y('price:Q', title='Price ($)',
+                scale=alt.Scale(domain=[y_min, y_max])),
+        tooltip=[
+            alt.Tooltip('recorded_at:T', title='Date',
+                        format='%d %b %Y %H:%M'),
+            alt.Tooltip('price:Q', title='Price', format='$.2f'),
+            alt.Tooltip('change_percentage:Q', title='Change %', format='.2f')
+        ]
+    ).properties(
+        height=350
+    ).interactive(bind_y=False)
+
+
+def create_multi_line_chart(chart_df: pd.DataFrame,
+                            min_time,
+                            max_time,
+                            y_min: float,
+                            y_max: float) -> alt.Chart:
+    """Create an interactive multi-line Altair chart."""
+    return alt.Chart(chart_df).mark_line(
+        strokeWidth=2.5
+    ).encode(
+        x=alt.X('recorded_at:T', title='Date & Time',
+                axis=alt.Axis(format='%d %b %H:%M', labelAngle=-45),
+                scale=alt.Scale(domain=[min_time.isoformat(), max_time.isoformat()])),
+        y=alt.Y('price:Q', title='Price ($)',
+                scale=alt.Scale(domain=[y_min, y_max])),
+        color=alt.Color('commodity_name:N', title='Commodity',
+                        scale=alt.Scale(range=['#03c1ff', '#e6530c',
+                                               '#22c55e', '#8b5cf6', '#f59e0b'])),
+        tooltip=[
+            alt.Tooltip('commodity_name:N', title='Commodity'),
+            alt.Tooltip('recorded_at:T', title='Date',
+                        format='%d %b %Y %H:%M'),
+            alt.Tooltip('price:Q', title='Price', format='$.2f'),
+            alt.Tooltip('change_percentage:Q', title='Change %', format='.2f')
+        ]
+    ).properties(
+        height=400
+    ).interactive(bind_y=False)
+
+
+def render_metrics_panel(market_df: pd.DataFrame,
+                         period_high: float,
+                         period_low: float,
+                         period_label: str):
+    """Render the metrics panel with current price and high/low."""
+    sorted_df = market_df.sort_values('recorded_at', ascending=True)
+    latest = sorted_df.iloc[-1]
+    st.metric("Current Price", f"${latest['price']:.2f}",
+              f"{latest['change_percentage']:.2f}%")
+
+    st.markdown("---")
+    st.markdown(f"""
+        <div style="background-color: #ff801d40; 
+                    border-radius: 10px; padding: 15px; text-align: center;
+                    border: 3px solid #ff801d;">
+            <p style="color: #64748b; margin: 0; font-size: 12px;">{period_label} HIGH</p>
+            <p style="color: #22c55e; font-size: 24px; font-weight: 700; margin: 5px 0;">
+                ${period_high:.2f}
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+        <div style="background-color: #ff801d40; 
+                    border-radius: 10px; padding: 15px; text-align: center; margin-top: 10px;
+                    border: 3px solid #ff801d;">
+            <p style="color: #64748b; margin: 0; font-size: 12px;">{period_label} LOW</p>
+            <p style="color: #ef4444; font-size: 24px; font-weight: 700; margin: 5px 0;">
+                ${period_low:.2f}
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+
+def get_period_label(time_range_hours: int) -> str:
+    """Get display label for the time period."""
+    period_labels = {3: "3H", 24: "1D", 168: "7D", 720: "30D"}
+    return period_labels.get(time_range_hours, "PERIOD")
+
+
+# --- Main graph building functions ---
+
 def build_single_commodity_graph(market_df: pd.DataFrame,
                                  graph_index: int = 0):
     """Build display for a single commodity."""
-    # Create columns: zoom slider | graph | metrics
     slider_col, graph_col, metrics_col = st.columns([0.8, 4, 1.5])
 
     if market_df.empty:
         with graph_col:
             st.warning("No market data available.")
-    else:
-        # Get unique key from commodity_id and graph_index
-        comm_id = market_df['commodity_id'].iloc[0]
-        unique_key = f"{comm_id}_{graph_index}"
+        st.divider()
+        return
 
-        # Get absolute time bounds from data
-        data_max_time = market_df['recorded_at'].max()
-        data_min_time = market_df['recorded_at'].min()
+    comm_id = market_df['commodity_id'].iloc[0]
+    unique_key = f"{comm_id}_{graph_index}"
 
-        # Time range buttons
-        with graph_col:
-            time_col1, time_col2, time_col3, time_col4 = st.columns(4)
-            with time_col1:
-                if st.button("3H", key=f"time_3h_{unique_key}", width='stretch'):
-                    st.session_state[f"time_range_{unique_key}"] = 3
-            with time_col2:
-                if st.button("1D", key=f"time_1d_{unique_key}", width='stretch'):
-                    st.session_state[f"time_range_{unique_key}"] = 24
-            with time_col3:
-                if st.button("7D", key=f"time_7d_{unique_key}", width='stretch'):
-                    st.session_state[f"time_range_{unique_key}"] = 168
-            with time_col4:
-                if st.button("30D", key=f"time_30d_{unique_key}", width='stretch'):
-                    st.session_state[f"time_range_{unique_key}"] = 720
+    data_max_time = market_df['recorded_at'].max()
+    data_min_time = market_df['recorded_at'].min()
 
-        # Get selected time range (default to 3 hours)
-        time_range_hours = st.session_state.get(f"time_range_{unique_key}", 3)
-        max_time = data_max_time
-        requested_min_time = data_max_time - timedelta(hours=time_range_hours)
-        min_time = max(data_min_time, requested_min_time)
+    # Time range buttons
+    with graph_col:
+        render_time_range_buttons(unique_key)
 
-        # Fetch historical data if needed (only for non-default commodities)
-        if requested_min_time < data_min_time and int(comm_id) not in DEFAULT_COMMODITY_IDS:
-            if f"fetching_{comm_id}" not in st.session_state:
-                conn = get_connection(ENV)
-                symbol = get_commodity_symbol_by_id(conn, int(comm_id))
-                conn.close()
-                if symbol:
-                    invoke_historical_lambda(symbol)
-                    st.session_state[f"fetching_{comm_id}"] = True
-            st.toast("Bear with us while we fetch the data...", icon="⏳")
+    time_range_hours = st.session_state.get(f"time_range_{unique_key}", 3)
+    min_time, max_time, requested_min_time = calculate_time_bounds(
+        data_max_time, data_min_time, time_range_hours
+    )
 
-        # Filter data to selected time range for high/low calculation
-        filtered_df = market_df[market_df['recorded_at'] >= min_time]
-        if not filtered_df.empty:
-            period_high = float(filtered_df['price'].max())
-            period_low = float(filtered_df['price'].min())
-        else:
-            period_high = float(market_df['price'].max())
-            period_low = float(market_df['price'].min())
+    fetch_historical_data_if_needed(comm_id, requested_min_time, data_min_time)
 
-        # Get current price for step calculation
-        sorted_df = market_df.sort_values('recorded_at', ascending=True)
-        latest = sorted_df.iloc[-1]
-        current_price = float(latest['price'])
+    period_high, period_low = calculate_period_high_low(market_df, min_time)
 
-        # Step size is 2% of current price
-        price_step = round(current_price * 0.02, 2)
+    sorted_df = market_df.sort_values('recorded_at', ascending=True)
+    current_price = float(sorted_df.iloc[-1]['price'])
+    price_step = round(current_price * 0.02, 2)
 
-        # Add padding to high/low for better graph visibility
-        price_range = period_high - period_low
-        padding = price_range * 0.05 if price_range > 0 else current_price * 0.01
-        default_y_max = float(period_high + padding)
-        default_y_min = float(max(0, period_low - padding))
+    default_y_min, default_y_max = calculate_y_axis_defaults(
+        period_high, period_low, current_price
+    )
 
-        with slider_col:
-            # Custom CSS for orange styling
-            st.markdown("""
-                <style>
-                    div[data-testid="stNumberInput"] input {
-                        border-color: #e6530c !important;
-                    }
-                    div[data-testid="stNumberInput"] button {
-                        background-color: #ff801d !important;
-                        color: white !important;
-                    }
-                </style>
-            """, unsafe_allow_html=True)
+    # Slider column
+    with slider_col:
+        render_price_input_css()
+        y_min, y_max = render_price_inputs(
+            default_y_min, default_y_max, price_step,
+            f"price_{unique_key}", time_range_hours
+        )
+        render_analysis_button(comm_id, unique_key)
 
-            st.markdown("**Price**")
+    # Graph column
+    with graph_col:
+        chart = create_single_line_chart(
+            market_df, min_time, max_time, y_min, y_max)
+        st.altair_chart(chart, width='stretch')
 
-            # Use number inputs for max/min with direct value entry
-            # Include time_range in key so values reset when period changes
-            y_max_val = st.number_input(
-                "Max $",
-                min_value=0.0,
-                value=default_y_max,
-                step=price_step,
-                format="%.2f",
-                key=f"price_max_{unique_key}_{time_range_hours}"
-            )
-            y_min_val = st.number_input(
-                "Min $",
-                min_value=0.0,
-                value=default_y_min,
-                step=price_step,
-                format="%.2f",
-                key=f"price_min_{unique_key}_{time_range_hours}"
-            )
-
-            if st.session_state.user:
-                # Analysis Mode button
-                st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("📊 Analysis", key=f"analysis_{unique_key}", width='stretch'):
-                    st.session_state.analysis_commodity_id = int(comm_id)
-                    st.switch_page("pages/analysis.py")
-
-            # Ensure min is always less than max
-            y_min = min(y_min_val, y_max_val)
-            y_max = max(y_min_val, y_max_val)
-
-        with graph_col:
-            # Create interactive line chart
-            chart = alt.Chart(market_df).mark_line(
-                color='#03c1ff',
-                strokeWidth=2.5
-            ).encode(
-                x=alt.X('recorded_at:T', title='Date & Time',
-                        axis=alt.Axis(format='%d %b %H:%M', labelAngle=-45),
-                        scale=alt.Scale(domain=[min_time.isoformat(), max_time.isoformat()])),
-                y=alt.Y('price:Q', title='Price ($)',
-                        scale=alt.Scale(domain=[y_min, y_max])),
-                tooltip=[
-                    alt.Tooltip('recorded_at:T', title='Date',
-                                format='%d %b %Y %H:%M'),
-                    alt.Tooltip('price:Q', title='Price', format='$.2f'),
-                    alt.Tooltip('change_percentage:Q',
-                                title='Change %', format='.2f')
-                ]
-            ).properties(
-                height=350
-            ).interactive(bind_y=False)
-
-            st.altair_chart(chart, width='stretch')
-
-        # Determine period label for high/low display
-        period_labels = {3: "3H", 24: "1D", 168: "7D", 720: "30D"}
-        period_label = period_labels.get(time_range_hours, "PERIOD")
-
+    # Metrics column
+    period_label = get_period_label(time_range_hours)
     with metrics_col:
-        if not market_df.empty:
-            # Sort by date and get the most recent record
-            sorted_df = market_df.sort_values('recorded_at', ascending=True)
-            latest = sorted_df.iloc[-1]
-            st.metric("Current Price", f"${latest['price']:.2f}",
-                      f"{latest['change_percentage']:.2f}%")
-
-            # Fancy high/low display
-            st.markdown("---")
-            st.markdown(f"""
-                <div style="background-color: #ff801d40; 
-                            border-radius: 10px; padding: 15px; text-align: center;
-                            border: 3px solid #ff801d;">
-                    <p style="color: #64748b; margin: 0; font-size: 12px;">{period_label} HIGH</p>
-                    <p style="color: #22c55e; font-size: 24px; font-weight: 700; margin: 5px 0;">
-                        ${period_high:.2f}
-                    </p>
-                </div>
-            """, unsafe_allow_html=True)
-
-            st.markdown(f"""
-                <div style="background-color: #ff801d40; 
-                            border-radius: 10px; padding: 15px; text-align: center; margin-top: 10px;
-                            border: 3px solid #ff801d;">
-                    <p style="color: #64748b; margin: 0; font-size: 12px;">{period_label} LOW</p>
-                    <p style="color: #ef4444; font-size: 24px; font-weight: 700; margin: 5px 0;">
-                        ${period_low:.2f}
-                    </p>
-                </div>
-            """, unsafe_allow_html=True)
+        render_metrics_panel(market_df, period_high, period_low, period_label)
 
     st.divider()
 
@@ -221,148 +334,55 @@ def build_combined_graph(df: pd.DataFrame, market_df: pd.DataFrame):
     if market_df.empty:
         with graph_col:
             st.warning("No market data available.")
-    else:
-        # Merge to get commodity names
-        chart_df = market_df.merge(
-            df[['commodity_id', 'commodity_name']].drop_duplicates(),
-            on='commodity_id',
-            how='left'
+        st.divider()
+        return
+
+    # Merge to get commodity names
+    chart_df = market_df.merge(
+        df[['commodity_id', 'commodity_name']].drop_duplicates(),
+        on='commodity_id',
+        how='left'
+    )
+
+    data_max_time = chart_df['recorded_at'].max()
+    data_min_time = chart_df['recorded_at'].min()
+
+    # Time range buttons
+    with graph_col:
+        render_time_range_buttons("combined")
+
+    time_range_hours = st.session_state.get("time_range_combined", 3)
+    min_time, max_time, requested_min_time = calculate_time_bounds(
+        data_max_time, data_min_time, time_range_hours
+    )
+
+    fetch_historical_data_for_multiple(
+        chart_df, requested_min_time, data_min_time)
+
+    period_high, period_low = calculate_period_high_low(chart_df, min_time)
+
+    avg_price = float(chart_df.groupby('commodity_id')['price'].last().mean())
+    price_step = round(avg_price * 0.02, 2)
+
+    default_y_min, default_y_max = calculate_y_axis_defaults(
+        period_high, period_low, avg_price
+    )
+
+    # Slider column
+    with slider_col:
+        render_price_input_css()
+        y_min, y_max = render_price_inputs(
+            default_y_min, default_y_max, price_step,
+            "combined_price", time_range_hours
         )
 
-        # Get absolute time bounds from data
-        data_max_time = chart_df['recorded_at'].max()
-        data_min_time = chart_df['recorded_at'].min()
+    # Graph column
+    with graph_col:
+        chart = create_multi_line_chart(
+            chart_df, min_time, max_time, y_min, y_max)
+        st.altair_chart(chart, width='stretch')
 
-        # Time range buttons
-        with graph_col:
-            time_col1, time_col2, time_col3, time_col4 = st.columns(4)
-            with time_col1:
-                if st.button("3H", key="time_3h_combined", width='stretch'):
-                    st.session_state["time_range_combined"] = 3
-            with time_col2:
-                if st.button("1D", key="time_1d_combined", width='stretch'):
-                    st.session_state["time_range_combined"] = 24
-            with time_col3:
-                if st.button("7D", key="time_7d_combined", width='stretch'):
-                    st.session_state["time_range_combined"] = 168
-            with time_col4:
-                if st.button("30D", key="time_30d_combined", width='stretch'):
-                    st.session_state["time_range_combined"] = 720
-
-        # Get selected time range (default to 3 hours)
-        time_range_hours = st.session_state.get("time_range_combined", 3)
-        max_time = data_max_time
-        requested_min_time = data_max_time - timedelta(hours=time_range_hours)
-        min_time = max(data_min_time, requested_min_time)
-
-        # Fetch historical data if needed (only for non-default commodities)
-        if requested_min_time < data_min_time:
-            needs_fetch = False
-            for comm_id in chart_df['commodity_id'].unique():
-                if int(comm_id) not in DEFAULT_COMMODITY_IDS:
-                    if f"fetching_{comm_id}" not in st.session_state:
-                        conn = get_connection(ENV)
-                        symbol = get_commodity_symbol_by_id(conn, int(comm_id))
-                        conn.close()
-                        if symbol:
-                            invoke_historical_lambda(symbol)
-                            st.session_state[f"fetching_{comm_id}"] = True
-                            needs_fetch = True
-            if needs_fetch:
-                st.toast("Bear with us while we fetch the data...", icon="⏳")
-
-        # Filter data to selected time range for high/low calculation
-        filtered_df = chart_df[chart_df['recorded_at'] >= min_time]
-        if not filtered_df.empty:
-            period_high = float(filtered_df['price'].max())
-            period_low = float(filtered_df['price'].min())
-        else:
-            period_high = float(chart_df['price'].max())
-            period_low = float(chart_df['price'].min())
-
-        # Step size is 2% of average current price across commodities
-        avg_price = float(chart_df.groupby(
-            'commodity_id')['price'].last().mean())
-        price_step = round(avg_price * 0.02, 2)
-
-        # Add padding to high/low for better graph visibility
-        price_range = period_high - period_low
-        padding = price_range * 0.05 if price_range > 0 else avg_price * 0.01
-        default_y_max = float(period_high + padding)
-        default_y_min = float(max(0, period_low - padding))
-
-        with slider_col:
-            # Custom CSS for orange styling
-            st.markdown("""
-                <style>
-                    div[data-testid="stNumberInput"] input {
-                        border-color: #e6530c !important;
-                    }
-                    div[data-testid="stNumberInput"] button {
-                        background-color: #ff801d !important;
-                        color: white !important;
-                    }
-                </style>
-            """, unsafe_allow_html=True)
-
-            st.markdown("**Price**")
-
-            # Use number inputs for max/min with direct value entry
-            # Include time_range in key so values reset when period changes
-            y_max_val = st.number_input(
-                "Max $",
-                min_value=0.0,
-                value=default_y_max,
-                step=price_step,
-                format="%.2f",
-                key=f"combined_price_max_{time_range_hours}"
-            )
-            y_min_val = st.number_input(
-                "Min $",
-                min_value=0.0,
-                value=default_y_min,
-                step=price_step,
-                format="%.2f",
-                key=f"combined_price_min_{time_range_hours}"
-            )
-
-            # Ensure min is always less than max
-            y_min = min(y_min_val, y_max_val)
-            y_max = max(y_min_val, y_max_val)
-
-        with graph_col:
-            # Create interactive multi-line chart
-            chart = alt.Chart(chart_df).mark_line(
-                strokeWidth=2.5
-            ).encode(
-                x=alt.X('recorded_at:T', title='Date & Time',
-                        axis=alt.Axis(format='%d %b %H:%M', labelAngle=-45),
-                        scale=alt.Scale(domain=[min_time.isoformat(), max_time.isoformat()])),
-                y=alt.Y('price:Q', title='Price ($)',
-                        scale=alt.Scale(domain=[y_min, y_max])),
-                color=alt.Color('commodity_name:N', title='Commodity',
-                                scale=alt.Scale(range=['#03c1ff',
-                                                       '#e6530c',
-                                                       '#22c55e',
-                                                       '#8b5cf6',
-                                                       '#f59e0b'])),
-                tooltip=[
-                    alt.Tooltip('commodity_name:N', title='Commodity'),
-                    alt.Tooltip('recorded_at:T', title='Date',
-                                format='%d %b %Y %H:%M'),
-                    alt.Tooltip('price:Q', title='Price', format='$.2f'),
-                    alt.Tooltip('change_percentage:Q',
-                                title='Change %', format='.2f')
-                ]
-            ).properties(
-                height=400
-            ).interactive(bind_y=False)
-
-            st.altair_chart(chart, width='stretch')
-
-    if not market_df.empty:
-        build_combined_metrics(df, market_df)
-
+    build_combined_metrics(df, market_df)
     st.divider()
 
 
