@@ -1,3 +1,2 @@
 DELETE FROM user_commodities
-WHERE user_id = %s
-  AND commodity_id = %s;
+WHERE (user_id, commodity_id) IN %s;
