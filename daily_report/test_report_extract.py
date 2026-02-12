@@ -97,5 +97,7 @@ class TestExtractUserCommodities:
 
         result = extract_user_commodities(mock_conn)
 
+        mock_cursor.execute.assert_called_once()
+
         assert isinstance(result, pd.DataFrame)
         assert len(result) == 1

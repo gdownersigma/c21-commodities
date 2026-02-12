@@ -20,7 +20,7 @@ from news_folder.config import COMMODITIES, TAG_KEYWORDS, TAG_COLORS, COMMODITY_
 # =============================================================================
 
 # Load CSS from external file
-CSS_FILE = Path(__file__).parent.parent / "news/styles.css"
+CSS_FILE = Path(__file__).parent.parent / "news_folder/styles.css"
 
 
 def load_css() -> str:
