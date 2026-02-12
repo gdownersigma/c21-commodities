@@ -24,4 +24,4 @@ jobs:
     - name: Linting
       run: pylint --recursive=y daily_report dashboard historical_pipeline pipeline price_alerts --fail-under 8 --ignore=venv,.venv --disable=duplicate-code
     - name: Testing
-      run: pytest . --ignore-glob='*' || [ $? -eq 5 ]
+      run: pytest . 
