@@ -314,29 +314,16 @@ def build_single_commodity_graph(market_df: pd.DataFrame,
         )
         render_analysis_button(comm_id, unique_key)
 
-            # Fancy high/low display
-            st.markdown("---")
-            st.markdown(f"""
-                <div style="background-color: #ff801d40; 
-                            border-radius: 10px; padding: 15px; text-align: center;
-                            border: 3px solid #ff801d;">
-                    <p style="color: #ff801d; margin: 0; font-size: 14px;">{period_label} HIGH</p>
-                    <p style="color: #22c55e; font-size: 24px; font-weight: 700; margin: 5px 0;">
-                        ${period_high:.2f}
-                    </p>
-                </div>
-            """, unsafe_allow_html=True)
+    # Graph column
+    with graph_col:
+        chart = create_single_line_chart(
+            market_df, min_time, max_time, y_min, y_max)
+        st.altair_chart(chart, width='stretch')
 
-            st.markdown(f"""
-                <div style="background-color: #ff801d40; 
-                            border-radius: 10px; padding: 15px; text-align: center; margin-top: 10px;
-                            border: 3px solid #ff801d;">
-                    <p style="color: #ff801d; margin: 0; font-size: 14px;">{period_label} LOW</p>
-                    <p style="color: #ef4444; font-size: 24px; font-weight: 700; margin: 5px 0;">
-                        ${period_low:.2f}
-                    </p>
-                </div>
-            """, unsafe_allow_html=True)
+    # Metrics column
+    period_label = get_period_label(time_range_hours)
+    with metrics_col:
+        render_metrics_panel(market_df, period_high, period_low, period_label)
 
     st.divider()
 
