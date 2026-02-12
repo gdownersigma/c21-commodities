@@ -1,13 +1,15 @@
 """Unit tests for adv_graph.py."""
-
-import pytest
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-from unittest.mock import patch, MagicMock
 import plotly.graph_objects as go
+from unittest.mock import patch
+import numpy as np
+import pandas as pd
+import pytest
+import sys
+from unittest.mock import MagicMock
 
-from adv_analysis.adv_graph import (
+# Mock query_data module BEFORE importing adv_graph
+sys.modules['query_data'] = MagicMock()
+from adv_graph import (
     prepare_daily_data,
     calculate_moving_averages,
     get_price_metrics,
@@ -264,14 +266,14 @@ class TestConfigureLayout:
 class TestRenderSidebar:
     """Tests for render_sidebar function."""
 
-    @patch("adv_analysis.adv_graph.st")
+    @patch("adv_graph.st")
     def test_returns_dict(self, mock_st):
         """Test that result is a dictionary."""
         mock_st.sidebar.checkbox.return_value = True
         result = render_sidebar()
         assert isinstance(result, dict)
 
-    @patch("adv_analysis.adv_graph.st")
+    @patch("adv_graph.st")
     def test_contains_show_volume(self, mock_st):
         """Test that show_volume key is present."""
         mock_st.sidebar.checkbox.return_value = True
@@ -286,13 +288,13 @@ class TestRenderSidebar:
 class TestRenderTitle:
     """Tests for render_title function."""
 
-    @patch("adv_analysis.adv_graph.st")
+    @patch("adv_graph.st")
     def test_calls_st_title(self, mock_st, daily_df):
         """Test that st.title is called."""
         render_title(daily_df)
         mock_st.title.assert_called_once()
 
-    @patch("adv_analysis.adv_graph.st")
+    @patch("adv_graph.st")
     def test_handles_missing_columns(self, mock_st):
         """Test handling of missing columns."""
         df = pd.DataFrame({'price': [100]})
@@ -307,7 +309,7 @@ class TestRenderTitle:
 class TestRenderMetrics:
     """Tests for render_metrics function."""
 
-    @patch("adv_analysis.adv_graph.st")
+    @patch("adv_graph.st")
     def test_calls_st_columns(self, mock_st):
         """Test that st.columns is called."""
         mock_st.columns.return_value = [MagicMock() for _ in range(4)]
@@ -357,7 +359,7 @@ class TestBuildChart:
 class TestHandleSubmit:
     """Tests for handle_submit function."""
 
-    @patch("adv_analysis.adv_graph.st")
+    @patch("adv_graph.st")
     def test_no_changes_shows_error(self, mock_st):
         """Test that error is shown when no changes made."""
         mock_session = MagicMock()
@@ -370,10 +372,10 @@ class TestHandleSubmit:
         handle_submit(new_comm)
         mock_st.error.assert_called()
 
-    @patch("adv_analysis.adv_graph.st")
-    @patch("adv_analysis.adv_graph.get_connection")
-    @patch("adv_analysis.adv_graph.update_user_commodities")
-    @patch("adv_analysis.adv_graph.get_commodities_with_user_subscriptions")
+    @patch("adv_graph.st")
+    @patch("adv_graph.get_connection")
+    @patch("adv_graph.update_user_commodities")
+    @patch("adv_graph.get_commodities_with_user_subscriptions")
     def test_changes_calls_update(self, mock_get_comm, mock_update, mock_conn, mock_st):
         """Test that update is called when changes made."""
         mock_session = MagicMock()
@@ -397,10 +399,10 @@ class TestHandleSubmit:
 class TestBuildPriceEditForm:
     """Tests for build_price_edit_form function."""
 
-    @patch("adv_analysis.adv_graph.st")
+    @patch("adv_graph.st")
     def test_renders_form_elements(self, mock_st):
         """Test that form elements are rendered."""
-        from adv_analysis.adv_graph import build_price_edit_form
+        from adv_graph import build_price_edit_form
         mock_session = MagicMock()
         mock_session.user_commodities = {
             1: {'name': 'Gold', 'track': True, 'buy': True, 'sell': True, 'buy_price': 100.0, 'sell_price': 200.0}
@@ -423,42 +425,42 @@ class TestBuildPriceEditForm:
 class TestAdvGraph:
     """Tests for adv_graph function."""
 
-    @patch("adv_analysis.adv_graph.st")
+    @patch("adv_graph.st")
     def test_shows_error_when_no_commodity_selected(self, mock_st):
         """Test error shown when no commodity selected."""
-        from adv_analysis.adv_graph import adv_graph
+        from adv_graph import adv_graph
         mock_st.session_state.get.return_value = None
         adv_graph(None)
         mock_st.error.assert_called()
 
-    @patch("adv_analysis.adv_graph.st")
-    @patch("adv_analysis.adv_graph.get_connection")
-    @patch("adv_analysis.adv_graph.fetch_data")
+    @patch("adv_graph.st")
+    @patch("adv_graph.get_connection")
+    @patch("adv_graph.fetch_data")
     def test_shows_error_when_no_data(self, mock_fetch, mock_conn, mock_st):
         """Test error shown when no data found."""
-        from adv_analysis.adv_graph import adv_graph
+        from adv_graph import adv_graph
         mock_conn.return_value = MagicMock()
         mock_fetch.return_value = pd.DataFrame()
         adv_graph(1)
         mock_st.error.assert_called()
 
-    @patch("adv_analysis.adv_graph.st")
-    @patch("adv_analysis.adv_graph.get_connection")
-    @patch("adv_analysis.adv_graph.fetch_data")
-    @patch("adv_analysis.adv_graph.prepare_daily_data")
-    @patch("adv_analysis.adv_graph.calculate_moving_averages")
-    @patch("adv_analysis.adv_graph.render_sidebar")
-    @patch("adv_analysis.adv_graph.render_title")
-    @patch("adv_analysis.adv_graph.build_price_edit_form")
-    @patch("adv_analysis.adv_graph.get_price_metrics")
-    @patch("adv_analysis.adv_graph.render_metrics")
-    @patch("adv_analysis.adv_graph.build_chart")
+    @patch("adv_graph.st")
+    @patch("adv_graph.get_connection")
+    @patch("adv_graph.fetch_data")
+    @patch("adv_graph.prepare_daily_data")
+    @patch("adv_graph.calculate_moving_averages")
+    @patch("adv_graph.render_sidebar")
+    @patch("adv_graph.render_title")
+    @patch("adv_graph.build_price_edit_form")
+    @patch("adv_graph.get_price_metrics")
+    @patch("adv_graph.render_metrics")
+    @patch("adv_graph.build_chart")
     def test_renders_chart_with_data(self, mock_build_chart, mock_render_metrics,
                                      mock_get_metrics, mock_build_form, mock_render_title,
                                      mock_render_sidebar, mock_calc_ma, mock_prep_daily,
                                      mock_fetch, mock_conn, mock_st):
         """Test chart is rendered when data exists."""
-        from adv_analysis.adv_graph import adv_graph
+        from adv_graph import adv_graph
         mock_conn.return_value = MagicMock()
         mock_fetch.return_value = pd.DataFrame(
             {'price': [100], 'recorded_at': [pd.Timestamp.now()]})
