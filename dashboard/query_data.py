@@ -197,7 +197,6 @@ def create_commodity_connections(_conn: connection, comm_data: list[dict]):
                  item["buy_price"] if item["buy_price"] != 0 else None,
                  item["sell_price"] if item["sell_price"] != 0 else None)
                 for item in comm_data]
-        print(data)
         execute_values(cur, query, data)
 
     _conn.commit()
