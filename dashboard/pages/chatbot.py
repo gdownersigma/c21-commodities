@@ -438,7 +438,7 @@ if __name__ == "__main__":
     # Header
     st.markdown("""
         <div style="text-align: center; padding: 20px 0;">
-            <h1 style="color: #ff801d; margin: 0;">📊 ICMA</h1>
+            <h1 style="margin: 0;">📊 <span style="color: #009BFFFE;">IC</span><span style="color: #FF6D0AFF;">MA</span></h1>
             <p style="color: #64748b; font-size: 16px; margin-top: 5px;">
                 Intelligent Commodity Market Analyst
             </p>

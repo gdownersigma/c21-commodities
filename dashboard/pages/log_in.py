@@ -9,7 +9,8 @@ from menu import menu
 from query_data import (get_connection,
                         get_password_by_email,
                         get_user_by_email)
-from dashboard_items import (build_form,
+from dashboard_items import (display_title,
+                             build_form,
                              page_redirect)
 from helper_functions import (fill_user_commodities,
                               decrypt_and_verify)
@@ -57,14 +58,7 @@ if __name__ == "__main__":
 
     menu()
 
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.image("images/pivot_point.png", width='stretch')
-
-    st.title(body="Pivot Point",
-             text_alignment="center")
-
-    st.divider()
+    display_title()
 
     st.header("Log In", text_alignment="center")
 

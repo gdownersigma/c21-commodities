@@ -10,7 +10,8 @@ from query_data import (get_connection,
                         get_user_count_by_email,
                         create_user,
                         create_commodity_connections)
-from dashboard_items import (build_form,
+from dashboard_items import (display_title,
+                             build_form,
                              page_redirect)
 from helper_functions import (fill_user_commodities,
                               hash_and_encrypt)
@@ -77,14 +78,7 @@ if __name__ == "__main__":
 
     menu()
 
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.image("images/pivot_point.png", width='stretch')
-
-    st.title(body="Pivot Point",
-             text_alignment="center")
-
-    st.divider()
+    display_title()
 
     st.header("Sign Up", text_alignment="center")
 
