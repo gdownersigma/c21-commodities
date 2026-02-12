@@ -12,7 +12,8 @@ from dotenv import load_dotenv
 from requests.exceptions import RequestException
 
 from menu import menu_with_redirect
-from dashboard_items import logout_button
+from dashboard_items import (logout_button,
+                             display_markdown_title)
 from news.config import COMMODITIES, TAG_KEYWORDS, TAG_COLORS, COMMODITY_BADGES
 
 # =============================================================================
@@ -322,14 +323,22 @@ def main():
     st.set_page_config(page_title="Commodity News Analysis",
                        page_icon="📊", layout="wide")
     st.markdown(load_css(), unsafe_allow_html=True)
-    st.title("📊 Commodity News Analysis")
+    display_markdown_title(title="📊 Commodity News Analysis",
+                           alignment="center",
+                           size=44,
+                           weight=700,
+                           colour="#009BFFFE;")
 
     if not fmp_api_key:
         st.error("⚠️ API_KEY not configured. Please set it in your .env file.")
         st.stop()
 
-    st.markdown(
-        "Real-time news tracking for **Gold**, **Silver**, **Copper**, **Wheat**, and **Oats**.")
+    display_markdown_title(title="Real-time news tracking for **Gold**, **Silver**, **Copper**, **Wheat**, and **Oats**.",
+                           alignment="center",
+                           size=16,
+                           weight=400,
+                           colour="#FF6D0AFF")
+
     st.divider()
     selected_commodity, selected_tags = render_sidebar()
     with st.spinner("Fetching news..."):
