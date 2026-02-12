@@ -6,7 +6,7 @@ import numpy as np
 from unittest.mock import patch, MagicMock
 import plotly.graph_objects as go
 
-from adv_analysis.adv_graph import (
+from dashboard.adv_analysis.adv_graph import (
     prepare_daily_data,
     calculate_moving_averages,
     get_price_metrics,
