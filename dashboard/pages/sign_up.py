@@ -26,7 +26,7 @@ st.session_state.last_page = "sign_up"
 def handle_signup(conn, field_input):
     """Handle signup logic."""
 
-    if field_input["password"] != field_input["password confirm"]:
+    if field_input["password"] != field_input["password confirmation"]:
         st.error("Passwords do not match. Please try again.")
     else:
         user_count = get_user_count_by_email(
@@ -94,7 +94,7 @@ if __name__ == "__main__":
             "name": "default",
             "email": "default",
             "password": "password",
-            "password confirm": "password",
+            "password confirmation": "password",
         },
         form_name="Sign up",
         form_key="sign_up_form",
