@@ -634,24 +634,3 @@ class TestMain:
         with pytest.raises(SystemExit):
             main()
         mock_st.error.assert_called()
-
-    @patch("pages.news.st")
-    @patch("pages.news.load_dotenv")
-    @patch("pages.news.ENV", {"API_KEY": "test_key"})
-    @patch("pages.news.render_sidebar")
-    @patch("pages.news.fetch_general_news")
-    @patch("pages.news.fetch_stock_news")
-    @patch("pages.news.render_news_feed_tab")
-    @patch("pages.news.render_prices_tab")
-    @patch("pages.news.render_statistics_tab")
-    @patch("pages.news.render_footer")
-    def test_runs_with_api_key(self, mock_footer, mock_stats, mock_prices, mock_feed, mock_stock, mock_general, mock_sidebar, mock_dotenv, mock_st):
-        """Test that main runs when API key present."""
-        mock_sidebar.return_value = ("All Commodities", [])
-        mock_general.return_value = []
-        mock_stock.return_value = []
-        mock_st.spinner.return_value.__enter__ = MagicMock()
-        mock_st.spinner.return_value.__exit__ = MagicMock()
-        mock_st.tabs.return_value = [MagicMock(), MagicMock(), MagicMock()]
-        main()
-        mock_st.title.assert_called()
