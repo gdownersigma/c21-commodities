@@ -1,4 +1,14 @@
 """Unit tests for adv_graph.py."""
+import plotly.graph_objects as go
+from unittest.mock import patch
+import numpy as np
+import pandas as pd
+import pytest
+import sys
+from unittest.mock import MagicMock
+
+# Mock query_data module BEFORE importing adv_graph
+sys.modules['query_data'] = MagicMock()
 from adv_graph import (
     prepare_daily_data,
     calculate_moving_averages,
@@ -14,16 +24,6 @@ from adv_graph import (
     build_chart,
     handle_submit,
 )
-import plotly.graph_objects as go
-from unittest.mock import patch
-import numpy as np
-import pandas as pd
-import pytest
-import sys
-from unittest.mock import MagicMock
-
-# Mock query_data module BEFORE importing adv_graph
-sys.modules['query_data'] = MagicMock()
 
 
 # =============================================================================
