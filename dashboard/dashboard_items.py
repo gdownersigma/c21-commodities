@@ -549,3 +549,21 @@ def welcome_message():
         """, unsafe_allow_html=True)
 
     st.sidebar.divider()
+
+
+def display_title():
+    """Display dashboard title and header."""
+
+    st.markdown(f"""
+            <div style='text-align: center; font-size: 50px; font-weight: 700;'>
+                <span style="color: #009BFFFE;">Pivot</span> <span style="color: #FF6D0AFF;">Point</span>
+            </div>
+        """, unsafe_allow_html=True, text_alignment='center')
+
+    st.markdown(f"""
+            <div style='text-align: center; font-size: 30px; font-weight: 700;'>
+                <span style="color: #009BFFFE;">Trade Smarter, </span> <span style="color: #FF6D0AFF;">Not Harder</span>
+            </div>
+        """, unsafe_allow_html=True, text_alignment='center')
+
+    st.divider()

@@ -11,7 +11,8 @@ from query_data import (get_connection,
                         get_market_data_by_ids)
 from helper_functions import (add_commodity,
                               remove_commodity)
-from dashboard_items import (add_commodity_selector,
+from dashboard_items import (display_title,
+                             add_commodity_selector,
                              build_single_commodity_graph,
                              build_combined_graph,
                              logout_button)
@@ -184,10 +185,7 @@ if __name__ == "__main__":
 
     menu()
 
-    st.title(body="Pivot Point",
-             text_alignment="center")
-
-    st.divider()
+    display_title()
 
     build_sidebar(df_data)
 

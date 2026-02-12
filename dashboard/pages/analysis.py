@@ -5,7 +5,8 @@
 import streamlit as st
 
 from menu import menu_with_redirect
-from dashboard_items import logout_button
+from dashboard_items import (display_title,
+                             logout_button)
 from adv_analysis.adv_graph import adv_graph
 
 st.set_page_config(
@@ -19,13 +20,6 @@ if __name__ == "__main__":
     menu_with_redirect()
     logout_button()
 
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.image("images/pivot_point.png", width='stretch')
-
-    st.title(body="Pivot Point",
-             text_alignment="center")
-
-    st.divider()
+    display_title()
 
     adv_graph(st.session_state.analysis_commodity_id)
