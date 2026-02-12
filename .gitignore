@@ -36,3 +36,5 @@ __pycache__/
 
 #html test files
 .html
+
+.coverage
