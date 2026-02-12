@@ -12,16 +12,17 @@ from dotenv import load_dotenv
 from requests.exceptions import RequestException
 
 from menu import menu_with_redirect
+
 from dashboard_items import (logout_button,
                              display_markdown_title)
-from news.config import COMMODITIES, TAG_KEYWORDS, TAG_COLORS, COMMODITY_BADGES
+from news_folder.config import COMMODITIES, TAG_KEYWORDS, TAG_COLORS, COMMODITY_BADGES
 
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
 
 # Load CSS from external file
-CSS_FILE = Path(__file__).parent.parent / "news/styles.css"
+CSS_FILE = Path(__file__).parent.parent / "news_folder/styles.css"
 
 
 def load_css() -> str:

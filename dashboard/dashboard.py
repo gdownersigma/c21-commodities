@@ -21,35 +21,34 @@ st.set_page_config(
     layout="wide"
 )
 
-if "last_page" not in st.session_state:
-    st.session_state.last_page = "dashboard"
 
-if "user" not in st.session_state:
-    st.session_state.user = {}
+def initialise_session_state():
+    """Initialize session state variables if they don't exist."""
 
-if "num_commodities" not in st.session_state:
-    st.session_state.num_commodities = 3
+    if "last_page" not in st.session_state:
+        st.session_state.last_page = "dashboard"
 
-if "selected_commodities" not in st.session_state:
-    st.session_state.selected_commodities = {
-        "commodity_0": [10, "Brent Crude Oil"],
-        "commodity_1": [18, "Gold Futures"],
-        "commodity_2": [40, "Silver Futures"]
-    }
+    if "user" not in st.session_state:
+        st.session_state.user = {}
 
-if "subscribed_commodities" not in st.session_state:
-    st.session_state.subscribed_commodities = [10, 18, 40]
+    if "num_commodities" not in st.session_state:
+        st.session_state.num_commodities = 3
 
-if "user_commodities" not in st.session_state:
-    st.session_state.user_commodities = {}
+    if "selected_commodities" not in st.session_state:
+        st.session_state.selected_commodities = {
+            "commodity_0": [10, "Brent Crude Oil"],
+            "commodity_1": [18, "Gold Futures"],
+            "commodity_2": [40, "Silver Futures"]
+        }
 
-if "analysis_commodity_id" not in st.session_state:
-    st.session_state.analysis_commodity_id = -1
+    if "subscribed_commodities" not in st.session_state:
+        st.session_state.subscribed_commodities = [10, 18, 40]
 
-if st.session_state.user and st.session_state.last_page != "dashboard":
-    st.session_state.selected_commodities = {}
-    st.session_state.num_commodities = 1
-    st.session_state.last_page = "dashboard"
+    if "user_commodities" not in st.session_state:
+        st.session_state.user_commodities = {}
+
+    if "analysis_commodity_id" not in st.session_state:
+        st.session_state.analysis_commodity_id = -1
 
 
 def build_sidebar(df: pd.DataFrame):
@@ -175,6 +174,14 @@ def display_individual_graphs(conn):
 if __name__ == "__main__":
 
     load_dotenv()
+
+    if "num_commodities" not in st.session_state:
+        initialise_session_state()
+
+    if st.session_state.last_page != "dashboard" and st.session_state.user:
+        st.session_state.selected_commodities = {}
+        st.session_state.num_commodities = 1
+        st.session_state.last_page = "dashboard"
 
     connection = get_connection(ENV)
 
