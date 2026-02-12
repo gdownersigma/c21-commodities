@@ -2,5 +2,6 @@
 import sys
 from pathlib import Path
 
-# Add dashboard directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+dashboard_path = str(Path(__file__).parent.parent)
+if dashboard_path not in sys.path:
+    sys.path.insert(0, dashboard_path)
