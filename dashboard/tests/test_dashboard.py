@@ -3,11 +3,10 @@
 import streamlit as st
 import sys
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
-import pytest
 from streamlit.testing.v1 import AppTest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
