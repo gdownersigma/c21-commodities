@@ -24,6 +24,7 @@ from dashboard_items import (
     render_price_inputs,
     render_time_range_buttons,
     welcome_message,
+    build_combined_metrics,
     DEFAULT_COMMODITY_IDS,
 )
 
@@ -155,6 +156,8 @@ def test_page_redirect_creates_button(mock_st):
 
     mock_st.button.assert_called_once_with("Click here")
     mock_st.switch_page.assert_not_called()
+
+
 @patch("dashboard_items.st")
 def test_page_redirect_switches_page_on_click(mock_st):
     """Should switch page when button clicked."""
@@ -341,3 +344,152 @@ def test_welcome_message_displays_name(mock_st):
     call_args = mock_st.sidebar.markdown.call_args[0][0]
     assert "alice" in call_args
     mock_st.sidebar.divider.assert_called_once()
+
+
+@patch("dashboard_items.st")
+def test_welcome_message_escapes_html(mock_st):
+    """Should escape HTML in user names to prevent XSS."""
+    mock_st.session_state.user = {"user_name": "<script>alert('xss')</script>"}
+
+    welcome_message()
+
+    call_args = mock_st.sidebar.markdown.call_args[0][0]
+    assert "<script>" not in call_args
+    assert "&lt;script&gt;" in call_args
+
+
+def test_calculate_time_bounds_clamps_to_data_min():
+    """Should clamp min_time to data_min when requested range exceeds data."""
+    data_max = datetime(2026, 2, 13, 12, 0)
+    data_min = datetime(2026, 2, 13, 10, 0)
+
+    min_time, _, _ = calculate_time_bounds(data_max, data_min, 720)
+
+    assert min_time == data_min
+
+
+def test_calculate_y_axis_defaults_min_never_negative():
+    """Should never return a negative y_min."""
+    y_min, y_max = calculate_y_axis_defaults(5.0, 1.0, 3.0)
+
+    assert y_min >= 0
+    assert y_max > y_min
+
+
+@patch("dashboard_items.st")
+def test_render_metrics_panel_shows_high_low(mock_st):
+    """Should display high/low values in markdown."""
+    df = pd.DataFrame({
+        "price": [100.0, 110.0],
+        "recorded_at": pd.to_datetime(["2026-02-13 10:00", "2026-02-13 11:00"]),
+        "change_percentage": [0.0, 10.0]
+    })
+
+    render_metrics_panel(df, 110.0, 100.0, "1D")
+
+    markdown_calls = [c[0][0] for c in mock_st.markdown.call_args_list]
+    high_low_html = " ".join(markdown_calls)
+    assert "110.00" in high_low_html
+    assert "100.00" in high_low_html
+    assert "1D" in high_low_html
+
+
+@patch("dashboard_items.st")
+@patch("dashboard_items.invoke_historical_lambda")
+@patch("dashboard_items.get_commodity_symbol_by_id", return_value="GCUSD")
+def test_fetch_historical_uses_passed_conn(mock_symbol, mock_lambda, mock_st):
+    """Should use the passed connection instead of creating a new one."""
+    mock_st.session_state = {}
+    mock_conn = MagicMock()
+
+    fetch_historical_data_if_needed(
+        comm_id=99,
+        requested_min_time=datetime(2026, 2, 1),
+        data_min_time=datetime(2026, 2, 10),
+        conn=mock_conn
+    )
+
+    mock_symbol.assert_called_once_with(mock_conn, 99)
+    mock_conn.close.assert_not_called()
+    mock_lambda.assert_called_once_with("GCUSD")
+
+
+@patch("dashboard_items.st")
+def test_fetch_historical_data_if_needed_skips_when_not_needed(mock_st):
+    """Should skip when requested_min_time >= data_min_time."""
+    mock_st.session_state = {}
+
+    fetch_historical_data_if_needed(
+        comm_id=99,
+        requested_min_time=datetime(2026, 2, 15),
+        data_min_time=datetime(2026, 2, 10),
+    )
+
+    mock_st.toast.assert_not_called()
+
+
+@patch("dashboard_items.st")
+def test_fetch_historical_for_multiple_skips_when_not_needed(mock_st):
+    """Should skip when requested_min_time >= data_min_time."""
+    mock_st.session_state = {}
+    chart_df = pd.DataFrame({"commodity_id": [99]})
+
+    fetch_historical_data_for_multiple(
+        chart_df,
+        requested_min_time=datetime(2026, 2, 15),
+        data_min_time=datetime(2026, 2, 10),
+    )
+
+    mock_st.toast.assert_not_called()
+
+
+@patch("dashboard_items.st")
+def test_build_combined_metrics_displays_commodities(mock_st):
+    """Should display metrics for each commodity."""
+    mock_st.columns.return_value = [MagicMock(), MagicMock()]
+
+    df = pd.DataFrame({
+        "commodity_id": [1, 2],
+        "commodity_name": ["Gold", "Silver"]
+    })
+    market_df = pd.DataFrame({
+        "commodity_id": [1, 2],
+        "price": [1800.0, 25.0],
+        "recorded_at": pd.to_datetime(["2026-02-13 10:00", "2026-02-13 10:00"]),
+        "change_percentage": [1.5, -0.5]
+    })
+
+    build_combined_metrics(df, market_df)
+
+    assert mock_st.markdown.call_count == 2
+    all_html = " ".join(c[0][0] for c in mock_st.markdown.call_args_list)
+    assert "Gold" in all_html
+    assert "Silver" in all_html
+    assert "1800.00" in all_html
+    assert "25.00" in all_html
+
+
+@patch("dashboard_items.st")
+def test_logout_button_resets_state_on_click(mock_st):
+    """Should reset session state when logout is clicked."""
+    mock_st.sidebar.button.return_value = True
+    mock_st.session_state = MagicMock()
+
+    logout_button()
+
+    assert mock_st.session_state.user == {}
+    assert mock_st.session_state.subscribed_commodities == [10, 18, 40]
+    mock_st.rerun.assert_called_once()
+
+
+@patch("dashboard_items.st")
+def test_display_markdown_title_custom_params(mock_st):
+    """Should use custom alignment, size, weight and colour."""
+    display_markdown_title("Hello", alignment="left",
+                           size=30, weight=400, colour="#000000")
+
+    call_args = mock_st.markdown.call_args[0][0]
+    assert "text-align: left" in call_args
+    assert "font-size: 30px" in call_args
+    assert "font-weight: 400" in call_args
+    assert "color: #000000" in call_args
