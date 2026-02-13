@@ -116,6 +116,7 @@ def test_render_time_range_buttons_creates_buttons(mock_st):
     render_time_range_buttons("test_key")
 
     assert mock_st.columns.called
+    assert mock_st.button.call_count == 4
 
 
 @patch("dashboard_items.st")
@@ -152,7 +153,8 @@ def test_page_redirect_creates_button(mock_st):
 
     page_redirect("Click here", "pages/test.py")
 
-
+    mock_st.button.assert_called_once_with("Click here")
+    mock_st.switch_page.assert_not_called()
 @patch("dashboard_items.st")
 def test_page_redirect_switches_page_on_click(mock_st):
     """Should switch page when button clicked."""
