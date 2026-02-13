@@ -9,7 +9,21 @@ from dashboard_items import (
     calculate_period_high_low,
     calculate_time_bounds,
     calculate_y_axis_defaults,
+    create_multi_line_chart,
+    create_single_line_chart,
+    display_markdown_title,
+    display_title,
+    fetch_historical_data_for_multiple,
+    fetch_historical_data_if_needed,
     get_period_label,
+    logout_button,
+    page_redirect,
+    render_analysis_button,
+    render_metrics_panel,
+    render_price_input_css,
+    render_price_inputs,
+    render_time_range_buttons,
+    welcome_message,
     DEFAULT_COMMODITY_IDS,
 )
 
@@ -97,8 +111,6 @@ def test_get_period_label_unknown():
 @patch("dashboard_items.st")
 def test_render_time_range_buttons_creates_buttons(mock_st):
     """Should create four time range buttons."""
-    from dashboard_items import render_time_range_buttons
-
     mock_st.columns.return_value = [MagicMock() for _ in range(4)]
 
     render_time_range_buttons("test_key")
@@ -109,8 +121,6 @@ def test_render_time_range_buttons_creates_buttons(mock_st):
 @patch("dashboard_items.st")
 def test_render_price_input_css_adds_styles(mock_st):
     """Should add custom CSS for price inputs."""
-    from dashboard_items import render_price_input_css
-
     render_price_input_css()
 
     mock_st.markdown.assert_called_once()
@@ -119,8 +129,6 @@ def test_render_price_input_css_adds_styles(mock_st):
 @patch("dashboard_items.st")
 def test_display_markdown_title_renders_html(mock_st):
     """Should render title as HTML."""
-    from dashboard_items import display_markdown_title
-
     display_markdown_title("Test Title")
 
     mock_st.markdown.assert_called_once()
@@ -131,8 +139,6 @@ def test_display_markdown_title_renders_html(mock_st):
 @patch("dashboard_items.st")
 def test_display_title_renders_branding(mock_st):
     """Should render Pivot Point branding."""
-    from dashboard_items import display_title
-
     display_title()
 
     assert mock_st.markdown.call_count >= 2
@@ -142,8 +148,6 @@ def test_display_title_renders_branding(mock_st):
 @patch("dashboard_items.st")
 def test_page_redirect_creates_button(mock_st):
     """Should create redirect button."""
-    from dashboard_items import page_redirect
-
     mock_st.button.return_value = False
 
     page_redirect("Click here", "pages/test.py")
@@ -152,8 +156,6 @@ def test_page_redirect_creates_button(mock_st):
 @patch("dashboard_items.st")
 def test_page_redirect_switches_page_on_click(mock_st):
     """Should switch page when button clicked."""
-    from dashboard_items import page_redirect
-
     mock_st.button.return_value = True
 
     page_redirect("Click here", "pages/test.py")
@@ -164,8 +166,6 @@ def test_page_redirect_switches_page_on_click(mock_st):
 @patch("dashboard_items.st")
 def test_render_price_inputs_returns_values(mock_st):
     """Should return min and max price values."""
-    from dashboard_items import render_price_inputs
-
     mock_st.number_input.side_effect = [150.0, 100.0]
 
     y_min, y_max = render_price_inputs(100.0, 150.0, 1.0, "test", 24)
@@ -177,8 +177,6 @@ def test_render_price_inputs_returns_values(mock_st):
 @patch("dashboard_items.st")
 def test_render_price_inputs_swaps_if_inverted(mock_st):
     """Should swap values if min > max."""
-    from dashboard_items import render_price_inputs
-
     mock_st.number_input.side_effect = [50.0, 200.0]
 
     y_min, y_max = render_price_inputs(100.0, 150.0, 1.0, "test", 24)
@@ -189,8 +187,6 @@ def test_render_price_inputs_swaps_if_inverted(mock_st):
 @patch("dashboard_items.st")
 def test_render_metrics_panel_displays_price(mock_st):
     """Should display current price metric."""
-    from dashboard_items import render_metrics_panel
-
     df = pd.DataFrame({
         "price": [100.0, 110.0],
         "recorded_at": pd.to_datetime(["2026-02-13 10:00", "2026-02-13 11:00"]),
@@ -204,8 +200,6 @@ def test_render_metrics_panel_displays_price(mock_st):
 
 def test_create_single_line_chart_returns_chart():
     """Should return an Altair chart."""
-    from dashboard_items import create_single_line_chart
-
     df = pd.DataFrame({
         "price": [100.0, 110.0],
         "recorded_at": pd.to_datetime(["2026-02-13 10:00", "2026-02-13 11:00"]),
@@ -221,8 +215,6 @@ def test_create_single_line_chart_returns_chart():
 
 def test_create_multi_line_chart_returns_chart():
     """Should return an Altair chart for multiple commodities."""
-    from dashboard_items import create_multi_line_chart
-
     df = pd.DataFrame({
         "price": [100.0, 110.0, 50.0, 55.0],
         "recorded_at": pd.to_datetime([
@@ -243,8 +235,6 @@ def test_create_multi_line_chart_returns_chart():
 @patch("dashboard_items.st")
 def test_display_markdown_title_handles_bold(mock_st):
     """Should convert **bold** to HTML strong tags."""
-    from dashboard_items import display_markdown_title
-
     display_markdown_title("**Bold** text")
 
     call_args = mock_st.markdown.call_args[0][0]
@@ -256,12 +246,9 @@ def test_display_markdown_title_handles_bold(mock_st):
 @patch("dashboard_items.get_commodity_symbol_by_id", return_value="GCUSD")
 @patch("dashboard_items.get_connection")
 def test_fetch_historical_data_if_needed_fetches(
-    mock_conn, mock_symbol, mock_lambda, mock_st
+    _mock_conn, _mock_symbol, mock_lambda, mock_st
 ):
     """Should fetch historical data for non-default commodities."""
-    from dashboard_items import fetch_historical_data_if_needed
-    from datetime import datetime
-
     mock_st.session_state = {}
 
     fetch_historical_data_if_needed(
@@ -277,9 +264,6 @@ def test_fetch_historical_data_if_needed_fetches(
 @patch("dashboard_items.st")
 def test_fetch_historical_data_if_needed_skips_default(mock_st):
     """Should skip fetching for default commodity IDs."""
-    from dashboard_items import fetch_historical_data_if_needed
-    from datetime import datetime
-
     mock_st.session_state = {}
 
     fetch_historical_data_if_needed(
@@ -296,12 +280,9 @@ def test_fetch_historical_data_if_needed_skips_default(mock_st):
 @patch("dashboard_items.get_commodity_symbol_by_id", return_value="GCUSD")
 @patch("dashboard_items.get_connection")
 def test_fetch_historical_data_for_multiple(
-    mock_conn, mock_symbol, mock_lambda, mock_st
+    mock_conn, _mock_symbol, mock_lambda, mock_st
 ):
     """Should fetch data for multiple non-default commodities."""
-    from dashboard_items import fetch_historical_data_for_multiple
-    from datetime import datetime
-
     mock_st.session_state = {}
     mock_conn.return_value = MagicMock()
 
@@ -319,8 +300,6 @@ def test_fetch_historical_data_for_multiple(
 @patch("dashboard_items.st")
 def test_render_analysis_button_hidden_when_not_logged_in(mock_st):
     """Should not render button when user is not logged in."""
-    from dashboard_items import render_analysis_button
-
     mock_st.session_state.user = None
 
     render_analysis_button(1, "test")
@@ -331,8 +310,6 @@ def test_render_analysis_button_hidden_when_not_logged_in(mock_st):
 @patch("dashboard_items.st")
 def test_render_analysis_button_shown_when_logged_in(mock_st):
     """Should render button when user is logged in."""
-    from dashboard_items import render_analysis_button
-
     mock_st.session_state.user = {"name": "test"}
     mock_st.button.return_value = False
 
@@ -344,8 +321,6 @@ def test_render_analysis_button_shown_when_logged_in(mock_st):
 @patch("dashboard_items.st")
 def test_logout_button_no_click(mock_st):
     """Should show divider even without clicking logout."""
-    from dashboard_items import logout_button
-
     mock_st.sidebar.button.return_value = False
 
     logout_button()
@@ -356,8 +331,6 @@ def test_logout_button_no_click(mock_st):
 @patch("dashboard_items.st")
 def test_welcome_message_displays_name(mock_st):
     """Should display user's name in welcome message."""
-    from dashboard_items import welcome_message
-
     mock_st.session_state.user = {"user_name": "alice"}
 
     welcome_message()

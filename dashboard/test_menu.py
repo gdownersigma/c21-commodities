@@ -12,7 +12,7 @@ from menu import (
 
 @patch("menu.st")
 @patch("menu.welcome_message")
-def test_authenticated_menu_calls_welcome(mock_welcome, mock_st):
+def test_authenticated_menu_calls_welcome(mock_welcome, _mock_st):
     """Should call welcome_message for authenticated users."""
     authenticated_menu()
     mock_welcome.assert_called_once()
