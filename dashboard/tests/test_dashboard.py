@@ -99,12 +99,14 @@ class TestBuildSidebar:
         from dashboard import build_sidebar
 
         df = _make_commodity_df()
-        st.session_state.user = {}
-        st.session_state.num_commodities = 1
-        st.session_state.selected_commodities = {}
-        st.session_state.subscribed_commodities = [10, 18, 40]
 
-        at = AppTest.from_function(lambda: build_sidebar(df)).run()
+        # Configure the Streamlit test runtime's session_state via AppTest
+        at = AppTest.from_function(build_sidebar, df)
+        at.session_state.user = {}
+        at.session_state.num_commodities = 1
+        at.session_state.selected_commodities = {}
+        at.session_state.subscribed_commodities = [10, 18, 40]
+        at.run()
 
         button_labels = [b.label for b in at.button]
         assert "➕ Add" not in button_labels
