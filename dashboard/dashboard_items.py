@@ -78,16 +78,21 @@ def fetch_historical_data_for_multiple(chart_df: pd.DataFrame,
     """Fetch historical data for multiple commodities if needed."""
     if requested_min_time < data_min_time:
         needs_fetch = False
-        for comm_id in chart_df['commodity_id'].unique():
-            if int(comm_id) not in DEFAULT_COMMODITY_IDS:
-                if f"fetching_{comm_id}" not in st.session_state:
-                    conn = get_connection(ENV)
-                    symbol = get_commodity_symbol_by_id(conn, int(comm_id))
-                    conn.close()
-                    if symbol:
-                        invoke_historical_lambda(symbol)
-                        st.session_state[f"fetching_{comm_id}"] = True
-                        needs_fetch = True
+        conn = None
+        try:
+            for comm_id in chart_df['commodity_id'].unique():
+                if int(comm_id) not in DEFAULT_COMMODITY_IDS:
+                    if f"fetching_{comm_id}" not in st.session_state:
+                        if conn is None:
+                            conn = get_connection(ENV)
+                        symbol = get_commodity_symbol_by_id(conn, int(comm_id))
+                        if symbol:
+                            invoke_historical_lambda(symbol)
+                            st.session_state[f"fetching_{comm_id}"] = True
+                            needs_fetch = True
+        finally:
+            if conn is not None:
+                conn.close()
         if needs_fetch:
             st.toast("Bear with us while we fetch the data...", icon="⏳")
 
