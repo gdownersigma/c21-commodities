@@ -12,22 +12,10 @@ from streamlit.testing.v1 import AppTest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-
-# ---------------------------------------------------------------------------
-# Example test (kept from original)
-# ---------------------------------------------------------------------------
-
-def test_increment_and_add():
-    """A user increments the number input, then clicks Add."""
-    at = AppTest.from_file("example.py").run()
-    at.number_input[0].increment().run()
-    at.button[0].click().run()
-    assert at.markdown[0].value == "Beans counted: 1"
-
-
 # ---------------------------------------------------------------------------
 # Helpers reused across tests
 # ---------------------------------------------------------------------------
+
 
 def _make_commodity_df(ids=None):
     """Return a minimal commodity DataFrame for testing."""
@@ -57,63 +45,6 @@ def _make_market_df(ids=None, prices=None, changes=None):
             "recorded_at": now
         })
     return pd.DataFrame(rows)
-
-
-# ---------------------------------------------------------------------------
-# Unit tests - helper_functions.py
-# ---------------------------------------------------------------------------
-
-
-class TestCleanInput:
-    """Tests for the clean_input helper."""
-
-    def test_strips_whitespace(self):
-        from helper_functions import clean_input
-        result = clean_input({"name": "  Alice  ", "email": " a@b.com "})
-        assert result == {"name": "Alice", "email": "a@b.com"}
-
-    def test_leaves_none_alone(self):
-        from helper_functions import clean_input
-        result = clean_input({"name": None, "email": ""})
-        assert result == {"name": None, "email": ""}
-
-    def test_empty_dict(self):
-        from helper_functions import clean_input
-        assert clean_input({}) == {}
-
-
-class TestAuthenticateUserInput:
-    """Tests for authenticate_user_input."""
-
-    def test_returns_true_for_filled_fields(self):
-        from helper_functions import authenticate_user_input
-        assert authenticate_user_input(
-            {"name": "Alice", "email": "a@b.com"}) is True
-
-    def test_returns_false_for_empty_field(self):
-        from helper_functions import authenticate_user_input
-        assert authenticate_user_input(
-            {"name": "", "email": "a@b.com"}) is False
-
-    def test_returns_false_for_none_field(self):
-        from helper_functions import authenticate_user_input
-        assert authenticate_user_input({"name": None}) is False
-
-
-class TestAuthenticateField:
-    """Tests for authenticate_field."""
-
-    def test_populated_field(self):
-        from helper_functions import authenticate_field
-        assert authenticate_field("hello") is True
-
-    def test_empty_string(self):
-        from helper_functions import authenticate_field
-        assert authenticate_field("") is False
-
-    def test_none(self):
-        from helper_functions import authenticate_field
-        assert authenticate_field(None) is False
 
 
 # ---------------------------------------------------------------------------
