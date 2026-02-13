@@ -59,13 +59,20 @@ def calculate_time_bounds(data_max_time, data_min_time, time_range_hours: int) -
     return min_time, max_time, requested_min_time
 
 
-def fetch_historical_data_if_needed(comm_id: int, requested_min_time, data_min_time):
+def fetch_historical_data_if_needed(comm_id: int,
+                                    requested_min_time,
+                                    data_min_time,
+                                    conn=None):
     """Fetch historical data from Lambda if needed for non-default commodities."""
     if requested_min_time < data_min_time and int(comm_id) not in DEFAULT_COMMODITY_IDS:
         if f"fetching_{comm_id}" not in st.session_state:
-            conn = get_connection(ENV)
+            should_close = False
+            if conn is None:
+                conn = get_connection(ENV)
+                should_close = True
             symbol = get_commodity_symbol_by_id(conn, int(comm_id))
-            conn.close()
+            if should_close:
+                conn.close()
             if symbol:
                 invoke_historical_lambda(symbol)
                 st.session_state[f"fetching_{comm_id}"] = True
