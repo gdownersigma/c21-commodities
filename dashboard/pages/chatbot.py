@@ -397,7 +397,7 @@ def display_chat_history(conn):
                             if not chart_df.empty:
                                 chart = create_price_chart(chart_df, title)
                                 st.altair_chart(
-                                    chart, use_container_width=True)
+                                    chart, width='stretch')
                             else:
                                 st.info(
                                     "📉 No data available for the requested chart.")
@@ -476,7 +476,7 @@ if __name__ == "__main__":
 
     # Clear chat button in sidebar
     if st.session_state.chat_history:
-        if st.sidebar.button("🗑️ Clear Chat", use_container_width=True):
+        if st.sidebar.button("🗑️ Clear Chat", width='stretch'):
             st.session_state.chat_history = []
             st.rerun()
 
@@ -535,7 +535,7 @@ if __name__ == "__main__":
                             if not chart_df.empty:
                                 chart = create_price_chart(chart_df, title)
                                 st.altair_chart(
-                                    chart, use_container_width=True)
+                                    chart, width='stretch')
                             else:
                                 st.info(
                                     "📉 No data available for the requested chart.")

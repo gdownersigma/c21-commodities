@@ -300,7 +300,7 @@ def build_single_commodity_graph(market_df: pd.DataFrame,
     with graph_col:
         render_time_range_buttons(unique_key)
 
-    time_range_hours = st.session_state.get(f"time_range_{unique_key}", 3)
+    time_range_hours = st.session_state.get(f"time_range_{unique_key}", 720)
     min_time, max_time, requested_min_time = calculate_time_bounds(
         data_max_time, data_min_time, time_range_hours
     )
@@ -364,7 +364,7 @@ def build_combined_graph(df: pd.DataFrame, market_df: pd.DataFrame):
     with graph_col:
         render_time_range_buttons("combined")
 
-    time_range_hours = st.session_state.get("time_range_combined", 3)
+    time_range_hours = st.session_state.get("time_range_combined", 720)
     min_time, max_time, requested_min_time = calculate_time_bounds(
         data_max_time, data_min_time, time_range_hours
     )
