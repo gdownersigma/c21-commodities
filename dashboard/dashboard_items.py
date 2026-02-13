@@ -66,8 +66,9 @@ def build_single_commodity_graph(market_df: pd.DataFrame,
                 if st.button("30D", key=f"time_30d_{unique_key}", width='stretch'):
                     st.session_state[f"time_range_{unique_key}"] = 720
 
-        # Get selected time range (default to 3 hours)
-        time_range_hours = st.session_state.get(f"time_range_{unique_key}", 3)
+        # Get selected time range (default to 720 hours)
+        time_range_hours = st.session_state.get(
+            f"time_range_{unique_key}", 720)
         max_time = data_max_time
         requested_min_time = data_max_time - timedelta(hours=time_range_hours)
         min_time = max(data_min_time, requested_min_time)
@@ -250,8 +251,8 @@ def build_combined_graph(df: pd.DataFrame, market_df: pd.DataFrame):
                 if st.button("30D", key="time_30d_combined", width='stretch'):
                     st.session_state["time_range_combined"] = 720
 
-        # Get selected time range (default to 3 hours)
-        time_range_hours = st.session_state.get("time_range_combined", 3)
+        # Get selected time range (default to 720 hours)
+        time_range_hours = st.session_state.get("time_range_combined", 720)
         max_time = data_max_time
         requested_min_time = data_max_time - timedelta(hours=time_range_hours)
         min_time = max(data_min_time, requested_min_time)
