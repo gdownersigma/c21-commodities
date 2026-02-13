@@ -8,7 +8,9 @@ from historical_transform import (
     change_date_column_to_timestamp,
     remove_vwap_column,
     change_column_names,
-    replace_symbol_with_id
+    replace_symbol_with_id,
+    get_conn,
+    get_symbol_id_map
 )
 
 
@@ -176,3 +178,72 @@ class TestReplaceSymbolWithId:
 
         assert result['commodity_id'].iloc[0] == 1
         assert pd.isna(result['commodity_id'].iloc[1])
+
+
+class TestGetConn:
+    """Tests for get_conn function."""
+
+    @patch('historical_transform.connect')
+    def test_get_conn_calls_connect(self, mock_connect):
+        """Test get_conn calls psycopg2.connect."""
+        mock_connect.return_value = MagicMock()
+        conn = get_conn()
+        mock_connect.assert_called_once()
+        assert conn == mock_connect.return_value
+
+    @patch('historical_transform.connect')
+    def test_get_conn_passes_env_vars(self, mock_connect):
+        """Test get_conn passes environment variables to connect."""
+        mock_connect.return_value = MagicMock()
+        get_conn()
+        call_kwargs = mock_connect.call_args[1]
+        assert 'dbname' in call_kwargs
+        assert 'user' in call_kwargs
+        assert 'password' in call_kwargs
+        assert 'host' in call_kwargs
+        assert 'port' in call_kwargs
+
+
+class TestGetSymbolIdMap:
+    """Tests for get_symbol_id_map function."""
+
+    @patch('historical_transform.get_conn')
+    def test_returns_dict(self, mock_get_conn):
+        """Test get_symbol_id_map returns a dictionary."""
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [('GCUSD', 1), ('DCUSD', 2)]
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_get_conn.return_value = mock_conn
+
+        result = get_symbol_id_map()
+
+        assert isinstance(result, dict)
+        assert result == {'GCUSD': 1, 'DCUSD': 2}
+
+    @patch('historical_transform.get_conn')
+    def test_closes_cursor_and_connection(self, mock_get_conn):
+        """Test get_symbol_id_map closes cursor and connection."""
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_get_conn.return_value = mock_conn
+
+        get_symbol_id_map()
+
+        mock_cursor.close.assert_called_once()
+        mock_conn.close.assert_called_once()
+
+    @patch('historical_transform.get_conn')
+    def test_returns_empty_dict_when_no_commodities(self, mock_get_conn):
+        """Test get_symbol_id_map returns empty dict when table is empty."""
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []
+        mock_conn = MagicMock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_get_conn.return_value = mock_conn
+
+        result = get_symbol_id_map()
+
+        assert result == {}

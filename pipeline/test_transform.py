@@ -14,6 +14,8 @@ from transform import (
     get_symbol_id_map,
     replace_symbol_with_id,
     reorder_columns,
+    get_conn,
+    load_data,
 )
 
 
@@ -191,3 +193,31 @@ class TestFullTransformation:
         assert df["commodity_id"].iloc[0] == 42
         assert "symbol" not in df.columns
         assert "marketCap" not in df.columns
+
+
+@patch("transform.connect")
+def test_get_conn_calls_connect(mock_connect):
+    """Test get_conn calls psycopg2.connect with ENV vars."""
+    mock_connect.return_value = MagicMock()
+    conn = get_conn()
+    mock_connect.assert_called_once()
+    assert conn == mock_connect.return_value
+
+
+@patch("transform.pd.read_csv")
+def test_load_data_reads_csv(mock_read_csv):
+    """Test load_data calls pandas.read_csv and returns DataFrame."""
+    mock_df = MagicMock()
+    mock_read_csv.return_value = mock_df
+    result = load_data("somefile.csv")
+    mock_read_csv.assert_called_once_with("somefile.csv")
+    assert result == mock_df
+
+
+def test_logger_does_not_error():
+    """Test logger can log without error."""
+    from transform import logger
+    logger.info("Test info log")
+    logger.debug("Test debug log")
+    logger.warning("Test warning log")
+    logger.error("Test error log")
