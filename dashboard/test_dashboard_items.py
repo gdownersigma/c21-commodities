@@ -104,6 +104,7 @@ def test_render_time_range_buttons_creates_buttons(mock_st):
     render_time_range_buttons("test_key")
 
     assert mock_st.columns.called
+    assert mock_st.button.call_count == 4
 
 
 @patch("dashboard_items.st")
